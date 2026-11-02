@@ -1,0 +1,207 @@
+import { PrismaClient, User } from '@prisma/client';
+import { BaseRepository } from './base.repository';
+import {
+  UpsertUserDto,
+  ListUsersFilter,
+  CursorPagination,
+  PaginatedResult,
+} from './types';
+
+export class UserRepository extends BaseRepository {
+  constructor(prisma: PrismaClient) {
+    super(prisma);
+  }
+
+  /**
+   * Upserts an observed user for a tenant.
+   * Priority:
+   * 1. Match by (tenantId, platform, platformUserId) if platformUserId is present.
+   * 2. Else match by (tenantId, platform, lower(uniqueId)) if uniqueId is present.
+   * 3. Else insert as 'event_only' user.
+   */
+  async upsertUser(tenantId: string, data: UpsertUserDto): Promise<User> {
+    const platform = data.platform ?? 'tiktok';
+    const now = new Date();
+
+    // 1. Preferred Stable Identity: platformUserId
+    if (data.platformUserId) {
+      const existing = await this.prisma.user.findFirst({
+        where: {
+          tenantId,
+          platform,
+          platformUserId: data.platformUserId,
+        },
+      });
+
+      if (existing) {
+        return this.prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            uniqueId: data.uniqueId ?? existing.uniqueId,
+            nickname: data.nickname ?? existing.nickname,
+            avatarUrl: data.avatarUrl ?? existing.avatarUrl,
+            verified: data.verified ?? existing.verified,
+            identityQuality: 'platform_id',
+            lastSeenAt: now,
+            profileObservedAt: data.profileObservedAt ?? now,
+          },
+        });
+      }
+
+      return this.prisma.user.create({
+        data: {
+          tenantId,
+          platform,
+          platformUserId: data.platformUserId,
+          uniqueId: data.uniqueId ?? null,
+          nickname: data.nickname ?? null,
+          avatarUrl: data.avatarUrl ?? null,
+          verified: data.verified ?? false,
+          identityQuality: 'platform_id',
+          firstSeenAt: now,
+          lastSeenAt: now,
+          profileObservedAt: data.profileObservedAt ?? now,
+        },
+      });
+    }
+
+    // 2. Fallback Identity: uniqueId (handle)
+    if (data.uniqueId) {
+      const normalizedUniqueId = data.uniqueId.replace(/^@/, '').toLowerCase().trim();
+      const existing = await this.prisma.user.findFirst({
+        where: {
+          tenantId,
+          platform,
+          uniqueId: { equals: normalizedUniqueId, mode: 'insensitive' },
+        },
+      });
+
+      if (existing) {
+        return this.prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            nickname: data.nickname ?? existing.nickname,
+            avatarUrl: data.avatarUrl ?? existing.avatarUrl,
+            verified: data.verified ?? existing.verified,
+            identityQuality: existing.platformUserId ? existing.identityQuality : 'handle_fallback',
+            lastSeenAt: now,
+            profileObservedAt: data.profileObservedAt ?? now,
+          },
+        });
+      }
+
+      return this.prisma.user.create({
+        data: {
+          tenantId,
+          platform,
+          platformUserId: null,
+          uniqueId: normalizedUniqueId,
+          nickname: data.nickname ?? null,
+          avatarUrl: data.avatarUrl ?? null,
+          verified: data.verified ?? false,
+          identityQuality: 'handle_fallback',
+          firstSeenAt: now,
+          lastSeenAt: now,
+          profileObservedAt: data.profileObservedAt ?? now,
+        },
+      });
+    }
+
+    // 3. Event-Only Record (no stable identity provided)
+    return this.prisma.user.create({
+      data: {
+        tenantId,
+        platform,
+        platformUserId: null,
+        uniqueId: null,
+        nickname: data.nickname ?? null,
+        avatarUrl: data.avatarUrl ?? null,
+        verified: data.verified ?? false,
+        identityQuality: 'event_only',
+        firstSeenAt: now,
+        lastSeenAt: now,
+        profileObservedAt: data.profileObservedAt ?? now,
+      },
+    });
+  }
+
+  /**
+   * Find observed user strictly scoped to tenant.
+   */
+  async findById(tenantId: string, id: string): Promise<User | null> {
+    return this.prisma.user.findFirst({
+      where: {
+        id,
+        tenantId,
+      },
+    });
+  }
+
+  /**
+   * List users observed by this tenant with search filter and cursor pagination.
+   */
+  async listByTenant(
+    tenantId: string,
+    filters?: ListUsersFilter,
+    pagination?: CursorPagination
+  ): Promise<PaginatedResult<User>> {
+    const limit = this.normalizeLimit(pagination?.limit);
+    const decoded = this.decodeCursor(pagination?.cursor);
+
+    const where: any = {
+      tenantId,
+    };
+
+    if (filters?.search) {
+      where.OR = [
+        { uniqueId: { contains: filters.search, mode: 'insensitive' } },
+        { nickname: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filters?.sessionId) {
+      where.events = {
+        some: {
+          sessionId: filters.sessionId,
+          tenantId,
+        },
+      };
+    }
+
+    if (decoded) {
+      where.OR = [
+        { lastSeenAt: { lt: new Date(decoded.timestamp) } },
+        {
+          lastSeenAt: new Date(decoded.timestamp),
+          id: { lt: decoded.id },
+        },
+      ];
+    }
+
+    const items = await this.prisma.user.findMany({
+      where,
+      take: limit + 1,
+      orderBy: [
+        { lastSeenAt: 'desc' },
+        { id: 'desc' },
+      ],
+    });
+
+    const hasMore = items.length > limit;
+    const resultItems = hasMore ? items.slice(0, limit) : items;
+
+    let nextCursor: string | null = null;
+    if (hasMore && resultItems.length > 0) {
+      const last = resultItems[resultItems.length - 1];
+      nextCursor = this.encodeCursor(last.id, last.lastSeenAt);
+    }
+
+    return {
+      items: resultItems,
+      meta: {
+        nextCursor,
+        hasMore,
+      },
+    };
+  }
+}

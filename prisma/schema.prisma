@@ -1,0 +1,175 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TenantStatus {
+  active
+  suspended
+  deleted
+}
+
+enum ApiKeyStatus {
+  active
+  revoked
+  expired
+}
+
+enum SessionStatus {
+  queued
+  connecting
+  connected
+  reconnecting
+  disconnected
+  ended
+  failed
+}
+
+enum IdentityQuality {
+  platform_id
+  handle_fallback
+  event_only
+}
+
+enum EventType {
+  member
+  chat
+  gift
+  like
+  follow
+  share
+  roomUser
+  connected
+  disconnected
+  error
+}
+
+model Tenant {
+  id        String       @id @default(uuid()) @db.Uuid
+  name      String       @db.VarChar(160)
+  status    TenantStatus @default(active)
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  apiKeys        ApiKey[]
+  liveSessions   LiveSession[]
+  users          User[]
+  events         Event[]
+  tenantSettings TenantSettings?
+
+  @@map("tenants")
+}
+
+model ApiKey {
+  id         String       @id @default(uuid()) @db.Uuid
+  tenantId   String       @map("tenant_id") @db.Uuid
+  name       String       @db.VarChar(120)
+  keyPrefix  String       @unique @map("key_prefix") @db.VarChar(24)
+  keyHash    String       @map("key_hash") @db.VarChar(64)
+  revoked    Boolean      @default(false) @map("revoked")
+  status     ApiKeyStatus @default(active)
+  expiresAt  DateTime?    @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt DateTime?    @map("last_used_at") @db.Timestamptz(6)
+  revokedAt  DateTime?    @map("revoked_at") @db.Timestamptz(6)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, status])
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+model LiveSession {
+  id                String        @id @default(uuid()) @db.Uuid
+  tenantId          String        @map("tenant_id") @db.Uuid
+  platform          String        @default("tiktok") @db.VarChar(30)
+  creatorUsername   String        @map("creator_username") @db.VarChar(255)
+  status            SessionStatus @default(queued)
+  roomId            String?       @map("room_id") @db.VarChar(255)
+  startedAt         DateTime?     @map("started_at") @db.Timestamptz(6)
+  endedAt           DateTime?     @map("ended_at") @db.Timestamptz(6)
+  disconnectReason  String?       @map("disconnect_reason") @db.Text
+  connectorMetadata Json          @default("{}") @map("connector_metadata") @db.JsonB
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, status])
+  @@map("live_sessions")
+}
+
+model User {
+  id                String          @id @default(uuid()) @db.Uuid
+  tenantId          String          @map("tenant_id") @db.Uuid
+  platform          String          @default("tiktok") @db.VarChar(30)
+  platformUserId    String?         @map("platform_user_id") @db.VarChar(120)
+  uniqueId          String?         @map("unique_id") @db.VarChar(255)
+  nickname          String?         @db.VarChar(255)
+  avatarUrl         String?         @map("avatar_url") @db.Text
+  verified          Boolean?        @db.Boolean
+  identityQuality   IdentityQuality @default(event_only) @map("identity_quality")
+  firstSeenAt       DateTime        @default(now()) @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt        DateTime        @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  profileObservedAt DateTime?       @map("profile_observed_at") @db.Timestamptz(6)
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, lastSeenAt(sort: Desc)])
+  @@index([tenantId, platform, platformUserId])
+  @@index([tenantId, platform, uniqueId])
+  @@map("users")
+}
+
+model Event {
+  id                 String    @id @default(uuid()) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  sessionId          String    @map("session_id") @db.Uuid
+  userId             String?   @map("user_id") @db.Uuid
+  eventType          EventType @map("event_type")
+  sourceEventId      String?   @map("source_event_id") @db.VarChar(255)
+  data               Json      @default("{}") @map("data") @db.JsonB
+  occurredAt         DateTime  @map("occurred_at") @db.Timestamptz(6)
+  receivedAt         DateTime  @default(now()) @map("received_at") @db.Timestamptz(6)
+  payloadFingerprint String?   @map("payload_fingerprint") @db.VarChar(128)
+  connectorName      String?   @map("connector_name") @db.VarChar(120)
+  connectorVersion   String?   @map("connector_version") @db.VarChar(80)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session LiveSession @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade)
+  user    User?       @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, sessionId, receivedAt(sort: Desc)])
+  @@index([tenantId, eventType, receivedAt(sort: Desc)])
+  @@index([userId, receivedAt(sort: Desc)])
+  @@index([data], type: Gin)
+  @@map("events")
+}
+
+model TenantSettings {
+  tenantId           String   @id @map("tenant_id") @db.Uuid
+  eventRetentionDays Int      @default(30) @map("event_retention_days")
+  maxActiveSessions  Int      @default(1) @map("max_active_sessions")
+  settings           Json     @default("{}") @map("settings") @db.JsonB
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_settings")
+}

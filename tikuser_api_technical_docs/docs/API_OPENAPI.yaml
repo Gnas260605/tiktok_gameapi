@@ -1,0 +1,564 @@
+openapi: 3.1.0
+info:
+  title: TikUser API
+  version: 1.1.0
+  description: |
+    Multi-tenant API for managing TikTok LIVE connector sessions and retrieving
+    observed users and normalized LIVE events. This is not an official TikTok API.
+    Event coverage and profile fields depend on the upstream connector and source.
+servers:
+  - url: https://api.example.com/api/v1
+    description: Production placeholder
+  - url: http://localhost:3000/api/v1
+    description: Local development
+security:
+  - BearerApiKey: []
+tags:
+  - name: Health
+  - name: Sessions
+  - name: Users
+  - name: Events
+  - name: Realtime
+  - name: API Keys
+paths:
+  /health/live:
+    get:
+      tags: [Health]
+      security: []
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /health/ready:
+    get:
+      tags: [Health]
+      security: []
+      summary: Readiness probe
+      responses:
+        "200":
+          description: Dependencies ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /live/sessions:
+    post:
+      tags: [Sessions]
+      summary: Create and asynchronously connect a LIVE session
+      description: |
+        Returns 202 after the session has been persisted and queued. Connector
+        success/failure is reported later through session status and realtime events.
+        Duplicate active sessions for the same tenant and creator return 409.
+      operationId: createLiveSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "202":
+          description: Session accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    get:
+      tags: [Sessions]
+      summary: List tenant LIVE sessions
+      operationId: listLiveSessions
+      parameters:
+        - $ref: "#/components/parameters/Status"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Session page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /live/sessions/{sessionId}:
+    parameters:
+      - $ref: "#/components/parameters/SessionId"
+    get:
+      tags: [Sessions]
+      summary: Get session details
+      operationId: getLiveSession
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Sessions]
+      summary: Request session disconnect
+      operationId: disconnectLiveSession
+      responses:
+        "202":
+          description: Disconnect accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users:
+    get:
+      tags: [Users]
+      summary: List users observed by this tenant
+      description: This is not a directory lookup. Results contain users observed in tenant sessions.
+      operationId: listObservedUsers
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - name: sessionId
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Observed user page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Users]
+      summary: Get an observed user
+      operationId: getObservedUser
+      responses:
+        "200":
+          description: Observed user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{userId}/events:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Users]
+      summary: List events for an observed user
+      operationId: listUserEvents
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: User event page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventListResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /events:
+    get:
+      tags: [Events]
+      summary: List normalized events
+      operationId: listEvents
+      parameters:
+        - name: sessionId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: userId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: eventType
+          in: query
+          schema:
+            $ref: "#/components/schemas/EventType"
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Event page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /events/{eventId}:
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Events]
+      summary: Get one event
+      operationId: getEvent
+      responses:
+        "200":
+          description: Event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /realtime/tickets:
+    post:
+      tags: [Realtime]
+      summary: Create a short-lived WebSocket authentication ticket
+      description: |
+        Use the returned one-time/short-lived ticket to authenticate the WebSocket
+        connection. Do not put long-lived API keys in WebSocket query strings.
+      operationId: createRealtimeTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [sessionIds]
+              properties:
+                sessionIds:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, const: true }
+                  data:
+                    type: object
+                    required: [ticket, expiresAt, websocketUrl]
+                    properties:
+                      ticket: { type: string }
+                      expiresAt: { type: string, format: date-time }
+                      websocketUrl: { type: string, format: uri }
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api-keys:
+    post:
+      tags: [API Keys]
+      summary: Create API key (secret shown once)
+      operationId: createApiKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 120 }
+                expiresAt: { type: [string, "null"], format: date-time }
+      responses:
+        "201":
+          description: Key created; plaintext secret is returned only once
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, const: true }
+                  data:
+                    type: object
+                    required: [id, name, key, keyPrefix, createdAt]
+                    properties:
+                      id: { type: string, format: uuid }
+                      name: { type: string }
+                      key: { type: string, description: Display once only }
+                      keyPrefix: { type: string }
+                      createdAt: { type: string, format: date-time }
+    get:
+      tags: [API Keys]
+      summary: List API key metadata (never returns secrets)
+      operationId: listApiKeys
+      responses:
+        "200":
+          description: API key metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ApiKeyMetadata"
+  /api-keys/{keyId}:
+    parameters:
+      - name: keyId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [API Keys]
+      summary: Revoke API key
+      operationId: revokeApiKey
+      responses:
+        "204":
+          description: Key revoked
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  securitySchemes:
+    BearerApiKey:
+      type: http
+      scheme: bearer
+      bearerFormat: API_KEY
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Status:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [queued, connecting, connected, reconnecting, disconnected, ended, failed]
+  schemas:
+    EventType:
+      type: string
+      enum: [member, chat, gift, like, follow, share, roomUser, connected, disconnected, error]
+    User:
+      type: object
+      required: [id, platform, identityQuality, firstSeenAt, lastSeenAt]
+      properties:
+        id: { type: string, format: uuid }
+        platform: { type: string, const: tiktok }
+        platformUserId: { type: [string, "null"] }
+        uniqueId: { type: [string, "null"] }
+        nickname: { type: [string, "null"] }
+        avatarUrl: { type: [string, "null"], format: uri }
+        verified: { type: [boolean, "null"] }
+        identityQuality:
+          type: string
+          enum: [platform_id, handle_fallback, event_only]
+        firstSeenAt: { type: string, format: date-time }
+        lastSeenAt: { type: string, format: date-time }
+        profileObservedAt: { type: [string, "null"], format: date-time }
+    Event:
+      type: object
+      required: [eventId, sessionId, type, occurredAt, receivedAt, data]
+      properties:
+        eventId: { type: string, format: uuid }
+        sessionId: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/EventType" }
+        occurredAt: { type: string, format: date-time }
+        receivedAt: { type: string, format: date-time }
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/User"
+            - type: "null"
+        data:
+          type: object
+          description: Validated event-specific payload; absent upstream fields are null or omitted.
+          additionalProperties: true
+        source:
+          type: object
+          properties:
+            connector: { type: string }
+            connectorVersion: { type: [string, "null"] }
+    Session:
+      type: object
+      required: [id, platform, creatorUsername, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        platform: { type: string, const: tiktok }
+        creatorUsername: { type: string }
+        roomId: { type: [string, "null"] }
+        status:
+          type: string
+          enum: [queued, connecting, connected, reconnecting, disconnected, ended, failed]
+        disconnectReason: { type: [string, "null"] }
+        startedAt: { type: [string, "null"], format: date-time }
+        endedAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+    CreateSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [creatorUsername]
+      properties:
+        creatorUsername:
+          type: string
+          minLength: 2
+          maxLength: 255
+          pattern: "^[A-Za-z0-9._]+$"
+        reconnect:
+          type: boolean
+          default: true
+    SessionResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: "#/components/schemas/Session" }
+    SessionListResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Session" }
+        meta: { $ref: "#/components/schemas/PageMeta" }
+    UserResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: "#/components/schemas/User" }
+    UserListResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/User" }
+        meta: { $ref: "#/components/schemas/PageMeta" }
+    EventResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, const: true }
+        data: { $ref: "#/components/schemas/Event" }
+    EventListResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, const: true }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Event" }
+        meta: { $ref: "#/components/schemas/PageMeta" }
+    PageMeta:
+      type: object
+      properties:
+        nextCursor: { type: [string, "null"] }
+        hasMore: { type: boolean }
+    ApiKeyMetadata:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        keyPrefix: { type: string }
+        status: { type: string, enum: [active, revoked, expired] }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: [string, "null"], format: date-time }
+        lastUsedAt: { type: [string, "null"], format: date-time }
+    HealthResponse:
+      type: object
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        timestamp: { type: string, format: date-time }
+    Error:
+      type: object
+      required: [success, error]
+      properties:
+        success: { type: boolean, const: false }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details: {}
+            requestId: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Authenticated but not permitted
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found within this tenant
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Conflicting active session or resource state
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ServiceUnavailable:
+      description: Service or required dependency unavailable
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

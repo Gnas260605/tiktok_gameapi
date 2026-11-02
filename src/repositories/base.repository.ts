@@ -5,6 +5,8 @@ export interface DecodedCursor {
   timestamp: string;
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export abstract class BaseRepository {
   constructor(protected readonly prisma: PrismaClient) {}
 
@@ -19,7 +21,7 @@ export abstract class BaseRepository {
 
   /**
    * Decodes an opaque cursor string back into id and timestamp.
-   * Returns null if cursor is missing, malformed, or contains an invalid date timestamp.
+   * Returns null if cursor is missing, malformed, or contains an invalid date timestamp or invalid UUID id.
    */
   protected decodeCursor(cursor?: string): DecodedCursor | null {
     if (!cursor) return null;
@@ -30,11 +32,14 @@ export abstract class BaseRepository {
         parsed &&
         typeof parsed === 'object' &&
         typeof parsed.id === 'string' &&
-        parsed.id.trim().length > 0 &&
+        UUID_REGEX.test(parsed.id.trim()) &&
         typeof parsed.timestamp === 'string' &&
         !isNaN(new Date(parsed.timestamp).getTime())
       ) {
-        return parsed as DecodedCursor;
+        return {
+          id: parsed.id.trim(),
+          timestamp: parsed.timestamp,
+        };
       }
       return null;
     } catch {

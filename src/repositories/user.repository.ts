@@ -25,7 +25,7 @@ export class UserRepository extends BaseRepository {
 
     // 1. Preferred Stable Identity: platformUserId
     if (data.platformUserId) {
-      const existing = await this.prisma.user.findFirst({
+      let existing = await this.prisma.user.findFirst({
         where: {
           tenantId,
           platform,
@@ -33,10 +33,24 @@ export class UserRepository extends BaseRepository {
         },
       });
 
+      // If not found by platformUserId, check if there is an existing handle_fallback user with the same uniqueId
+      if (!existing && data.uniqueId) {
+        const normalizedUniqueId = data.uniqueId.replace(/^@/, '').toLowerCase().trim();
+        existing = await this.prisma.user.findFirst({
+          where: {
+            tenantId,
+            platform,
+            uniqueId: { equals: normalizedUniqueId, mode: 'insensitive' },
+            platformUserId: null,
+          },
+        });
+      }
+
       if (existing) {
         return this.prisma.user.update({
           where: { id: existing.id },
           data: {
+            platformUserId: data.platformUserId,
             uniqueId: data.uniqueId ?? existing.uniqueId,
             nickname: data.nickname ?? existing.nickname,
             avatarUrl: data.avatarUrl ?? existing.avatarUrl,
@@ -48,21 +62,48 @@ export class UserRepository extends BaseRepository {
         });
       }
 
-      return this.prisma.user.create({
-        data: {
-          tenantId,
-          platform,
-          platformUserId: data.platformUserId,
-          uniqueId: data.uniqueId ?? null,
-          nickname: data.nickname ?? null,
-          avatarUrl: data.avatarUrl ?? null,
-          verified: data.verified ?? false,
-          identityQuality: 'platform_id',
-          firstSeenAt: now,
-          lastSeenAt: now,
-          profileObservedAt: data.profileObservedAt ?? now,
-        },
-      });
+      try {
+        return await this.prisma.user.create({
+          data: {
+            tenantId,
+            platform,
+            platformUserId: data.platformUserId,
+            uniqueId: data.uniqueId ?? null,
+            nickname: data.nickname ?? null,
+            avatarUrl: data.avatarUrl ?? null,
+            verified: data.verified ?? false,
+            identityQuality: 'platform_id',
+            firstSeenAt: now,
+            lastSeenAt: now,
+            profileObservedAt: data.profileObservedAt ?? now,
+          },
+        });
+      } catch (err: any) {
+        if (err.code === 'P2002') {
+          const concurrent = await this.prisma.user.findFirst({
+            where: {
+              tenantId,
+              platform,
+              platformUserId: data.platformUserId,
+            },
+          });
+          if (concurrent) {
+            return this.prisma.user.update({
+              where: { id: concurrent.id },
+              data: {
+                uniqueId: data.uniqueId ?? concurrent.uniqueId,
+                nickname: data.nickname ?? concurrent.nickname,
+                avatarUrl: data.avatarUrl ?? concurrent.avatarUrl,
+                verified: data.verified ?? concurrent.verified,
+                identityQuality: 'platform_id',
+                lastSeenAt: now,
+                profileObservedAt: data.profileObservedAt ?? now,
+              },
+            });
+          }
+        }
+        throw err;
+      }
     }
 
     // 2. Fallback Identity: uniqueId (handle)
@@ -90,21 +131,47 @@ export class UserRepository extends BaseRepository {
         });
       }
 
-      return this.prisma.user.create({
-        data: {
-          tenantId,
-          platform,
-          platformUserId: null,
-          uniqueId: normalizedUniqueId,
-          nickname: data.nickname ?? null,
-          avatarUrl: data.avatarUrl ?? null,
-          verified: data.verified ?? false,
-          identityQuality: 'handle_fallback',
-          firstSeenAt: now,
-          lastSeenAt: now,
-          profileObservedAt: data.profileObservedAt ?? now,
-        },
-      });
+      try {
+        return await this.prisma.user.create({
+          data: {
+            tenantId,
+            platform,
+            platformUserId: null,
+            uniqueId: normalizedUniqueId,
+            nickname: data.nickname ?? null,
+            avatarUrl: data.avatarUrl ?? null,
+            verified: data.verified ?? false,
+            identityQuality: 'handle_fallback',
+            firstSeenAt: now,
+            lastSeenAt: now,
+            profileObservedAt: data.profileObservedAt ?? now,
+          },
+        });
+      } catch (err: any) {
+        if (err.code === 'P2002') {
+          const concurrent = await this.prisma.user.findFirst({
+            where: {
+              tenantId,
+              platform,
+              uniqueId: { equals: normalizedUniqueId, mode: 'insensitive' },
+            },
+          });
+          if (concurrent) {
+            return this.prisma.user.update({
+              where: { id: concurrent.id },
+              data: {
+                nickname: data.nickname ?? concurrent.nickname,
+                avatarUrl: data.avatarUrl ?? concurrent.avatarUrl,
+                verified: data.verified ?? concurrent.verified,
+                identityQuality: concurrent.platformUserId ? concurrent.identityQuality : 'handle_fallback',
+                lastSeenAt: now,
+                profileObservedAt: data.profileObservedAt ?? now,
+              },
+            });
+          }
+        }
+        throw err;
+      }
     }
 
     // 3. Event-Only Record (no stable identity provided)

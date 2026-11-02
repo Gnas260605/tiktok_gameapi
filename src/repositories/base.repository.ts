@@ -19,13 +19,21 @@ export abstract class BaseRepository {
 
   /**
    * Decodes an opaque cursor string back into id and timestamp.
+   * Returns null if cursor is missing, malformed, or contains an invalid date timestamp.
    */
   protected decodeCursor(cursor?: string): DecodedCursor | null {
     if (!cursor) return null;
     try {
       const json = Buffer.from(cursor, 'base64url').toString('utf8');
       const parsed = JSON.parse(json);
-      if (typeof parsed.id === 'string' && typeof parsed.timestamp === 'string') {
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        typeof parsed.id === 'string' &&
+        parsed.id.trim().length > 0 &&
+        typeof parsed.timestamp === 'string' &&
+        !isNaN(new Date(parsed.timestamp).getTime())
+      ) {
         return parsed as DecodedCursor;
       }
       return null;

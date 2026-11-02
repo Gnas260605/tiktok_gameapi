@@ -270,6 +270,107 @@ describe('Repository Layer Multi-Tenant Isolation Suite', () => {
       expect(eventOnlyUser.identityQuality).toBe('event_only');
       expect(eventOnlyUser.uniqueId).toBeNull();
     });
+
+    it('deletes user scoped to tenant and handles non-existent users gracefully', async () => {
+      const user = await userRepo.upsertUser(tenantAId, {
+        uniqueId: 'user_delete_test',
+        nickname: 'To Be Deleted',
+      });
+
+      // Tenant B cannot delete Tenant A user
+      const deletedByB = await userRepo.deleteUser(tenantBId, user.id);
+      expect(deletedByB).toBe(false);
+
+      // Non-existent ID returns false
+      const nonExistent = await userRepo.deleteUser(tenantAId, '00000000-0000-0000-0000-000000000000');
+      expect(nonExistent).toBe(false);
+
+      // Tenant A can delete own user
+      const deletedByA = await userRepo.deleteUser(tenantAId, user.id);
+      expect(deletedByA).toBe(true);
+
+      const foundAfter = await userRepo.findById(tenantAId, user.id);
+      expect(foundAfter).toBeNull();
+    });
+
+    it('preserves search filter across multiple cursor pagination pages without leaking non-matching users', async () => {
+      const searchToken = `searchtok_${Date.now().toString(36)}`;
+      const baseTime = Date.now() - 30000;
+
+      // Create 3 matching users and 2 distractor non-matching users with sequential timestamps
+      const match1 = await userRepo.upsertUser(tenantAId, {
+        uniqueId: `${searchToken}_alpha`,
+        nickname: `Alpha ${searchToken}`,
+        profileObservedAt: new Date(baseTime + 1000),
+      });
+      const distractor1 = await userRepo.upsertUser(tenantAId, {
+        uniqueId: `distractor_one_${Date.now().toString(36)}`,
+        nickname: 'Completely Unrelated Person 1',
+        profileObservedAt: new Date(baseTime + 2000),
+      });
+      const match2 = await userRepo.upsertUser(tenantAId, {
+        uniqueId: `${searchToken}_beta`,
+        nickname: `Beta ${searchToken}`,
+        profileObservedAt: new Date(baseTime + 3000),
+      });
+      const distractor2 = await userRepo.upsertUser(tenantAId, {
+        uniqueId: `distractor_two_${Date.now().toString(36)}`,
+        nickname: 'Completely Unrelated Person 2',
+        profileObservedAt: new Date(baseTime + 4000),
+      });
+      const match3 = await userRepo.upsertUser(tenantAId, {
+        uniqueId: `${searchToken}_gamma`,
+        nickname: `Gamma ${searchToken}`,
+        profileObservedAt: new Date(baseTime + 5000),
+      });
+
+      // Query with limit: 1 to force pagination across multiple cursor requests
+      const collectedUsers: any[] = [];
+      let cursor: string | undefined = undefined;
+      let pageCount = 0;
+
+      while (true) {
+        pageCount++;
+        const page = await userRepo.listByTenant(
+          tenantAId,
+          { search: searchToken },
+          { limit: 1, cursor }
+        );
+
+        collectedUsers.push(...page.items);
+
+        if (page.meta.hasMore && page.meta.nextCursor) {
+          cursor = page.meta.nextCursor;
+        } else {
+          break;
+        }
+
+        if (pageCount > 10) {
+          throw new Error('Infinite loop detected in user search pagination');
+        }
+      }
+
+      // 1. Exactly 3 matching users retrieved across 3 pages
+      expect(collectedUsers.length).toBe(3);
+      expect(pageCount).toBe(3);
+
+      // 2. All collected users must contain the search token
+      for (const u of collectedUsers) {
+        const inNickname = u.nickname?.includes(searchToken);
+        const inUniqueId = u.uniqueId?.includes(searchToken);
+        expect(inNickname || inUniqueId).toBe(true);
+      }
+
+      // 3. Distractor users must NOT be leaked on any page
+      const collectedIds = new Set(collectedUsers.map((u) => u.id));
+      expect(collectedIds.has(distractor1.id)).toBe(false);
+      expect(collectedIds.has(distractor2.id)).toBe(false);
+
+      // 4. All 3 matching users must be present
+      expect(collectedIds.has(match1.id)).toBe(true);
+      expect(collectedIds.has(match2.id)).toBe(true);
+      expect(collectedIds.has(match3.id)).toBe(true);
+    });
   });
 
   describe('EventRepository Isolation', () => {
@@ -331,6 +432,65 @@ describe('Repository Layer Multi-Tenant Isolation Suite', () => {
         })
       ).rejects.toThrow(); // PostgreSQL composite foreign key constraint violation!
     });
+
+    it('sets event.userId to null when linked user is deleted, preserving event and tenant isolation without P2011 error', async () => {
+      // 1. Create a session in tenant A
+      const session = await sessionRepo.create(tenantAId, {
+        creatorUsername: 'creator_fk_setnull_test',
+      });
+
+      // 2. Create a user in tenant A
+      const user = await userRepo.upsertUser(tenantAId, {
+        uniqueId: 'user_fk_victim',
+        nickname: 'FK Victim User',
+      });
+
+      // 3. Create an event linked to that session and user
+      const event = await eventRepo.createEvent(tenantAId, {
+        sessionId: session.id,
+        userId: user.id,
+        eventType: 'chat',
+        occurredAt: new Date(),
+        data: { text: 'Message before user deletion' },
+      });
+
+      expect(event.userId).toBe(user.id);
+      expect(event.tenantId).toBe(tenantAId);
+
+      // 4. Delete the user
+      // Prior to fix, this triggers PostgreSQL P2011: Null constraint violation on tenant_id
+      await prisma.user.delete({
+        where: { id: user.id },
+      });
+
+      // 5. Verify the user is gone
+      const deletedUser = await userRepo.findById(tenantAId, user.id);
+      expect(deletedUser).toBeNull();
+
+      // 6. Verify the event still exists in the database
+      const eventInDb = await prisma.event.findUnique({
+        where: { id: event.id },
+      });
+      expect(eventInDb).not.toBeNull();
+      expect(eventInDb?.id).toBe(event.id);
+      expect(eventInDb?.tenantId).toBe(tenantAId); // tenant_id MUST NOT be set to NULL!
+      expect(eventInDb?.sessionId).toBe(session.id); // session_id MUST NOT be set to NULL!
+      expect(eventInDb?.userId).toBeNull(); // user_id MUST be set to NULL!
+
+      // 7. Verify the event repository findById returns event with user: null
+      const eventViaRepo = await eventRepo.findById(tenantAId, event.id);
+      expect(eventViaRepo).not.toBeNull();
+      expect(eventViaRepo?.userId).toBeNull();
+      expect(eventViaRepo?.user).toBeNull();
+
+      // 8. Verify the event is still retrieved in listBySession
+      const sessionEvents = await eventRepo.listBySession(tenantAId, session.id);
+      expect(sessionEvents.items.some((e) => e.id === event.id)).toBe(true);
+
+      // 9. Verify the event is NOT returned in listByUser for the deleted user
+      const userEvents = await eventRepo.listByUser(tenantAId, user.id);
+      expect(userEvents.items.length).toBe(0);
+    });
   });
 
   describe('TenantSettingsRepository', () => {
@@ -357,6 +517,74 @@ describe('Repository Layer Multi-Tenant Isolation Suite', () => {
       expect(settingsB?.eventRetentionDays).toBe(7);
       expect(settingsB?.maxActiveSessions).toBe(1);
       expect((settingsB?.settings as any)?.featureFlag).toBe(false);
+    });
+  });
+
+  describe('Cursor Robustness and Malformed Input Handling', () => {
+    it('gracefully handles corrupted, non-JSON, and invalid timestamp cursors across all repositories', async () => {
+      const corruptCursors = [
+        // 1. Random corrupted string (not base64)
+        'not_base64_garbage_%^&*',
+        // 2. Valid base64 but not JSON
+        Buffer.from('not valid json content', 'utf8').toString('base64url'),
+        // 3. Valid JSON but missing required fields
+        Buffer.from(JSON.stringify({ randomField: 123 }), 'utf8').toString('base64url'),
+        // 4. Valid JSON with string timestamp that is NOT a valid date
+        Buffer.from(
+          JSON.stringify({ id: '00000000-0000-0000-0000-000000000001', timestamp: 'not-a-valid-date' }),
+          'utf8'
+        ).toString('base64url'),
+        // 5. Valid JSON with numeric timestamp
+        Buffer.from(
+          JSON.stringify({ id: '00000000-0000-0000-0000-000000000001', timestamp: 1234567890 }),
+          'utf8'
+        ).toString('base64url'),
+        // 6. Valid JSON with empty string timestamp
+        Buffer.from(
+          JSON.stringify({ id: '00000000-0000-0000-0000-000000000001', timestamp: '' }),
+          'utf8'
+        ).toString('base64url'),
+      ];
+
+      for (const badCursor of corruptCursors) {
+        // 1. SessionRepository must not throw; must fall back to first page
+        await expect(
+          sessionRepo.list(tenantAId, {}, { cursor: badCursor, limit: 10 })
+        ).resolves.toBeDefined();
+        const sessionRes = await sessionRepo.list(tenantAId, {}, { cursor: badCursor, limit: 10 });
+        expect(Array.isArray(sessionRes.items)).toBe(true);
+        expect(sessionRes.meta).toBeDefined();
+
+        // 2. UserRepository must not throw; must fall back to first page
+        await expect(
+          userRepo.listByTenant(tenantAId, {}, { cursor: badCursor, limit: 10 })
+        ).resolves.toBeDefined();
+        const userRes = await userRepo.listByTenant(tenantAId, {}, { cursor: badCursor, limit: 10 });
+        expect(Array.isArray(userRes.items)).toBe(true);
+        expect(userRes.meta).toBeDefined();
+
+        // 3. EventRepository must not throw; must fall back to first page
+        await expect(
+          eventRepo.listByTenant(tenantAId, {}, { cursor: badCursor, limit: 10 })
+        ).resolves.toBeDefined();
+        const eventRes = await eventRepo.listByTenant(tenantAId, {}, { cursor: badCursor, limit: 10 });
+        expect(Array.isArray(eventRes.items)).toBe(true);
+        expect(eventRes.meta).toBeDefined();
+      }
+    });
+
+    it('normalizes negative, zero, and excessively large pagination limits', async () => {
+      // Negative limit normalized to default (50)
+      const negRes = await sessionRepo.list(tenantAId, {}, { limit: -10 });
+      expect(negRes.items.length).toBeLessThanOrEqual(50);
+
+      // Zero limit normalized to default (50)
+      const zeroRes = await sessionRepo.list(tenantAId, {}, { limit: 0 });
+      expect(zeroRes.items.length).toBeLessThanOrEqual(50);
+
+      // Massive limit clamped to max (100)
+      const hugeRes = await sessionRepo.list(tenantAId, {}, { limit: 999999 });
+      expect(hugeRes.items.length).toBeLessThanOrEqual(100);
     });
   });
 });

@@ -138,6 +138,21 @@ export class UserRepository extends BaseRepository {
   }
 
   /**
+   * Delete an observed user strictly scoped to tenant.
+   * Associated events retain their tenantId and session, but their userId is set to null via DB FK.
+   */
+  async deleteUser(tenantId: string, id: string): Promise<boolean> {
+    const existing = await this.findById(tenantId, id);
+    if (!existing) {
+      return false;
+    }
+    await this.prisma.user.delete({
+      where: { id },
+    });
+    return true;
+  }
+
+  /**
    * List users observed by this tenant with search filter and cursor pagination.
    */
   async listByTenant(
@@ -152,13 +167,6 @@ export class UserRepository extends BaseRepository {
       tenantId,
     };
 
-    if (filters?.search) {
-      where.OR = [
-        { uniqueId: { contains: filters.search, mode: 'insensitive' } },
-        { nickname: { contains: filters.search, mode: 'insensitive' } },
-      ];
-    }
-
     if (filters?.sessionId) {
       where.events = {
         some: {
@@ -168,14 +176,32 @@ export class UserRepository extends BaseRepository {
       };
     }
 
+    const andConditions: any[] = [];
+
+    if (filters?.search && filters.search.trim().length > 0) {
+      const searchTerm = filters.search.trim();
+      andConditions.push({
+        OR: [
+          { uniqueId: { contains: searchTerm, mode: 'insensitive' } },
+          { nickname: { contains: searchTerm, mode: 'insensitive' } },
+        ],
+      });
+    }
+
     if (decoded) {
-      where.OR = [
-        { lastSeenAt: { lt: new Date(decoded.timestamp) } },
-        {
-          lastSeenAt: new Date(decoded.timestamp),
-          id: { lt: decoded.id },
-        },
-      ];
+      andConditions.push({
+        OR: [
+          { lastSeenAt: { lt: new Date(decoded.timestamp) } },
+          {
+            lastSeenAt: new Date(decoded.timestamp),
+            id: { lt: decoded.id },
+          },
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     const items = await this.prisma.user.findMany({

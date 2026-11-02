@@ -22,6 +22,9 @@ export class UserRepository extends BaseRepository {
   async upsertUser(tenantId: string, data: UpsertUserDto): Promise<User> {
     const platform = data.platform ?? 'tiktok';
     const now = new Date();
+    const normalizedUniqueId = data.uniqueId
+      ? data.uniqueId.trim().replace(/^@+/, '').toLowerCase()
+      : null;
 
     // 1. Preferred Stable Identity: platformUserId
     if (data.platformUserId) {
@@ -34,8 +37,7 @@ export class UserRepository extends BaseRepository {
       });
 
       // If not found by platformUserId, check if there is an existing handle_fallback user with the same uniqueId
-      if (!existing && data.uniqueId) {
-        const normalizedUniqueId = data.uniqueId.replace(/^@/, '').toLowerCase().trim();
+      if (!existing && normalizedUniqueId) {
         existing = await this.prisma.user.findFirst({
           where: {
             tenantId,
@@ -47,19 +49,56 @@ export class UserRepository extends BaseRepository {
       }
 
       if (existing) {
-        return this.prisma.user.update({
-          where: { id: existing.id },
-          data: {
-            platformUserId: data.platformUserId,
-            uniqueId: data.uniqueId ?? existing.uniqueId,
-            nickname: data.nickname ?? existing.nickname,
-            avatarUrl: data.avatarUrl ?? existing.avatarUrl,
-            verified: data.verified ?? existing.verified,
-            identityQuality: 'platform_id',
-            lastSeenAt: now,
-            profileObservedAt: data.profileObservedAt ?? now,
-          },
-        });
+        try {
+          return await this.prisma.user.update({
+            where: { id: existing.id },
+            data: {
+              platformUserId: data.platformUserId,
+              uniqueId: normalizedUniqueId ?? existing.uniqueId,
+              nickname: data.nickname ?? existing.nickname,
+              avatarUrl: data.avatarUrl ?? existing.avatarUrl,
+              verified: data.verified ?? existing.verified,
+              identityQuality: 'platform_id',
+              lastSeenAt: now,
+              profileObservedAt: data.profileObservedAt ?? now,
+            },
+          });
+        } catch (err: any) {
+          if (err.code === 'P2002') {
+            let concurrent = await this.prisma.user.findFirst({
+              where: {
+                tenantId,
+                platform,
+                platformUserId: data.platformUserId,
+              },
+            });
+            if (!concurrent && normalizedUniqueId) {
+              concurrent = await this.prisma.user.findFirst({
+                where: {
+                  tenantId,
+                  platform,
+                  uniqueId: { equals: normalizedUniqueId, mode: 'insensitive' },
+                },
+              });
+            }
+            if (concurrent) {
+              return await this.prisma.user.update({
+                where: { id: concurrent.id },
+                data: {
+                  platformUserId: data.platformUserId,
+                  uniqueId: normalizedUniqueId ?? concurrent.uniqueId,
+                  nickname: data.nickname ?? concurrent.nickname,
+                  avatarUrl: data.avatarUrl ?? concurrent.avatarUrl,
+                  verified: data.verified ?? concurrent.verified,
+                  identityQuality: 'platform_id',
+                  lastSeenAt: now,
+                  profileObservedAt: data.profileObservedAt ?? now,
+                },
+              });
+            }
+          }
+          throw err;
+        }
       }
 
       try {
@@ -68,7 +107,7 @@ export class UserRepository extends BaseRepository {
             tenantId,
             platform,
             platformUserId: data.platformUserId,
-            uniqueId: data.uniqueId ?? null,
+            uniqueId: normalizedUniqueId,
             nickname: data.nickname ?? null,
             avatarUrl: data.avatarUrl ?? null,
             verified: data.verified ?? false,
@@ -80,18 +119,28 @@ export class UserRepository extends BaseRepository {
         });
       } catch (err: any) {
         if (err.code === 'P2002') {
-          const concurrent = await this.prisma.user.findFirst({
+          let concurrent = await this.prisma.user.findFirst({
             where: {
               tenantId,
               platform,
               platformUserId: data.platformUserId,
             },
           });
+          if (!concurrent && normalizedUniqueId) {
+            concurrent = await this.prisma.user.findFirst({
+              where: {
+                tenantId,
+                platform,
+                uniqueId: { equals: normalizedUniqueId, mode: 'insensitive' },
+              },
+            });
+          }
           if (concurrent) {
-            return this.prisma.user.update({
+            return await this.prisma.user.update({
               where: { id: concurrent.id },
               data: {
-                uniqueId: data.uniqueId ?? concurrent.uniqueId,
+                platformUserId: data.platformUserId,
+                uniqueId: normalizedUniqueId ?? concurrent.uniqueId,
                 nickname: data.nickname ?? concurrent.nickname,
                 avatarUrl: data.avatarUrl ?? concurrent.avatarUrl,
                 verified: data.verified ?? concurrent.verified,
@@ -107,8 +156,7 @@ export class UserRepository extends BaseRepository {
     }
 
     // 2. Fallback Identity: uniqueId (handle)
-    if (data.uniqueId) {
-      const normalizedUniqueId = data.uniqueId.replace(/^@/, '').toLowerCase().trim();
+    if (normalizedUniqueId) {
       const existing = await this.prisma.user.findFirst({
         where: {
           tenantId,
@@ -157,7 +205,7 @@ export class UserRepository extends BaseRepository {
             },
           });
           if (concurrent) {
-            return this.prisma.user.update({
+            return await this.prisma.user.update({
               where: { id: concurrent.id },
               data: {
                 nickname: data.nickname ?? concurrent.nickname,

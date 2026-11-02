@@ -59,6 +59,7 @@ export class EventIngestionService {
     }
   > = new Map();
 
+  private readonly statusUpdateQueues: Map<string, Promise<void>> = new Map();
   private pendingPromises: Set<Promise<any>> = new Set();
   private dedupCleanupInterval: NodeJS.Timeout | null = null;
   private readonly options: Required<EventIngestionServiceOptions>;
@@ -87,6 +88,37 @@ export class EventIngestionService {
   }
 
   /**
+   * Chains a status update task into a per-session FIFO promise queue.
+   * Guarantees that asynchronous database status updates execute strictly in the order emitted.
+   */
+  private enqueueStatusUpdate(
+    sessionId: string,
+    updateFn: () => Promise<any>
+  ): Promise<any> {
+    const previousQueue = this.statusUpdateQueues.get(sessionId) || Promise.resolve();
+
+    const currentTask = previousQueue
+      .catch(() => {
+        // Catch previous errors so a single failed update does not break subsequent updates in the queue
+      })
+      .then(async () => {
+        return await updateFn();
+      });
+
+    // Maintain queue reference
+    this.statusUpdateQueues.set(
+      sessionId,
+      currentTask.then(
+        () => {},
+        () => {}
+      )
+    );
+
+    this.trackPromise(currentTask);
+    return currentTask;
+  }
+
+  /**
    * Destroys resources and timers.
    */
   public destroy(): void {
@@ -96,6 +128,7 @@ export class EventIngestionService {
     }
     this.dedupCache.clear();
     this.sessionStatsMap.clear();
+    this.statusUpdateQueues.clear();
   }
 
   /**
@@ -127,44 +160,68 @@ export class EventIngestionService {
 
     // Event handlers
     const eventHandler = (canonicalEvent: CanonicalEvent) => {
-      const task = this.ingestCanonicalEvent(tenantId, sessionId, canonicalEvent);
+      const task = this.ingestCanonicalEvent(tenantId, sessionId, canonicalEvent).catch((err) => {
+        console.error(`Unhandled error during canonical event ingestion on session ${sessionId}: ${err.message}`);
+      });
       this.trackPromise(task);
     };
 
     const connectedHandler = (info: { roomId: string }) => {
-      const task = this.sessionRepo
-        .updateStatus(tenantId, sessionId, 'connected', {
-          roomId: info?.roomId || connector.getRoomInfo()?.roomId,
-          startedAt: new Date(),
-        })
-        .catch((err) => {
+      this.enqueueStatusUpdate(sessionId, async () => {
+        try {
+          await this.sessionRepo.updateStatus(tenantId, sessionId, 'connected', {
+            roomId: info?.roomId || connector.getRoomInfo()?.roomId,
+            startedAt: new Date(),
+          });
+        } catch (err: any) {
           console.error(`Failed to update session ${sessionId} to connected: ${err.message}`);
-        });
-      this.trackPromise(task);
+        }
+      });
     };
 
     const reconnectingHandler = (info: { attempt: number; delayMs: number }) => {
-      const task = this.sessionRepo
-        .updateStatus(tenantId, sessionId, 'reconnecting', {
-          connectorMetadata: {
-            reconnectAttempt: info?.attempt,
-            delayMs: info?.delayMs,
-          },
-        })
-        .catch((err) => {
+      this.enqueueStatusUpdate(sessionId, async () => {
+        try {
+          await this.sessionRepo.updateStatus(tenantId, sessionId, 'reconnecting', {
+            connectorMetadata: {
+              reconnectAttempt: info?.attempt,
+              delayMs: info?.delayMs,
+            },
+          });
+        } catch (err: any) {
           console.error(`Failed to update session ${sessionId} to reconnecting: ${err.message}`);
-        });
-      this.trackPromise(task);
+        }
+      });
     };
 
     const disconnectedHandler = (info: { reason?: string }) => {
-      const task = this.handleSessionDisconnection(tenantId, sessionId, 'disconnected', info?.reason || 'STOPPED_BY_USER');
-      this.trackPromise(task);
+      this.enqueueStatusUpdate(sessionId, async () => {
+        try {
+          await this.handleSessionDisconnection(
+            tenantId,
+            sessionId,
+            'disconnected',
+            info?.reason || 'STOPPED_BY_USER'
+          );
+        } catch (err: any) {
+          console.error(`Failed to update session ${sessionId} to disconnected: ${err.message}`);
+        }
+      });
     };
 
     const endedHandler = (info: { reason?: string }) => {
-      const task = this.handleSessionDisconnection(tenantId, sessionId, 'ended', info?.reason || 'LIVE_ENDED_BY_CREATOR');
-      this.trackPromise(task);
+      this.enqueueStatusUpdate(sessionId, async () => {
+        try {
+          await this.handleSessionDisconnection(
+            tenantId,
+            sessionId,
+            'ended',
+            info?.reason || 'LIVE_ENDED_BY_CREATOR'
+          );
+        } catch (err: any) {
+          console.error(`Failed to update session ${sessionId} to ended: ${err.message}`);
+        }
+      });
     };
 
     const errorHandler = (err: any) => {
@@ -312,7 +369,8 @@ export class EventIngestionService {
     payload: any
   ): string {
     if (eventId && eventId.trim().length > 0) {
-      return `${tenantId}:${sessionId}:${eventId.trim()}`;
+      const raw = `${tenantId}:${sessionId}:${eventId.trim()}`;
+      return raw.length <= 128 ? raw : crypto.createHash('sha256').update(raw).digest('hex');
     }
 
     const timeKey = occurredAt instanceof Date ? occurredAt.getTime() : new Date(occurredAt).getTime();

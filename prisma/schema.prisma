@@ -131,7 +131,7 @@ model User {
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([tenantId, lastSeenAt(sort: Desc)])
   @@index([tenantId, platform, platformUserId])
-  @@index([tenantId, platform, uniqueId])
+  @@unique([tenantId, platform, uniqueId])
   @@map("users")
 }
 

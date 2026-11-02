@@ -21,7 +21,15 @@ export class SessionRepository extends BaseRepository {
    * Enforces lowercase normalized creatorUsername.
    */
   async create(tenantId: string, data: CreateSessionDto): Promise<LiveSession> {
-    const normalizedUsername = data.creatorUsername.replace(/^@/, '').toLowerCase().trim();
+    const raw = data.creatorUsername;
+    if (!raw || typeof raw !== 'string') {
+      throw new Error('Creator username cannot be empty or whitespace-only');
+    }
+
+    const normalizedUsername = raw.trim().replace(/^@+/, '').toLowerCase();
+    if (normalizedUsername.length === 0) {
+      throw new Error('Creator username cannot be empty or whitespace-only');
+    }
 
     return this.prisma.liveSession.create({
       data: {
@@ -56,7 +64,9 @@ export class SessionRepository extends BaseRepository {
     platform: string,
     creatorUsername: string
   ): Promise<LiveSession | null> {
-    const normalizedUsername = creatorUsername.replace(/^@/, '').toLowerCase().trim();
+    if (!creatorUsername || typeof creatorUsername !== 'string') return null;
+    const normalizedUsername = creatorUsername.trim().replace(/^@+/, '').toLowerCase();
+    if (normalizedUsername.length === 0) return null;
 
     return this.prisma.liveSession.findFirst({
       where: {
@@ -112,7 +122,7 @@ export class SessionRepository extends BaseRepository {
       ...(filters?.status && { status: filters.status }),
       ...(filters?.platform && { platform: filters.platform }),
       ...(filters?.creatorUsername && {
-        creatorUsername: filters.creatorUsername.replace(/^@/, '').toLowerCase().trim(),
+        creatorUsername: filters.creatorUsername.trim().replace(/^@+/, '').toLowerCase(),
       }),
     };
 

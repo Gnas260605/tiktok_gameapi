@@ -71,6 +71,7 @@ export class MockConnector extends BaseConnector {
   private tickerTimer: NodeJS.Timeout | null = null;
   private currentViewerCount: number = 250;
   private totalLikesAccumulator: number = 1000;
+  private lastSimulatedTimestamp: number = 0;
 
   constructor() {
     super();
@@ -83,11 +84,28 @@ export class MockConnector extends BaseConnector {
     creatorUsername: string,
     options?: ConnectorOptions
   ): Promise<ConnectionResult> {
+    if (this.status === 'disconnected' || this.status === 'ended' || this.status === 'failed') {
+      return {
+        success: false,
+        status: this.status,
+        error: `Connector is in terminal state (${this.status})`,
+      };
+    }
+
+    const normalized = this.normalizeCreatorUsername(creatorUsername);
+    if (!normalized || normalized.length === 0) {
+      return {
+        success: false,
+        status: 'failed',
+        error: 'Creator username cannot be empty',
+      };
+    }
+
     this.options = options ?? {
       sessionId: `mock_session_${uuidv4()}`,
       tenantId: `mock_tenant_${uuidv4()}`,
     };
-    this.creatorUsername = this.normalizeCreatorUsername(creatorUsername);
+    this.creatorUsername = normalized;
     this.isExplicitlyStopped = false;
     this.reconnectAttempts = 0;
 
@@ -145,7 +163,8 @@ export class MockConnector extends BaseConnector {
     type: EventType,
     payload: T,
     user: NormalizedUser | null = null,
-    sourceEventId?: string
+    sourceEventId?: string,
+    explicitTimestamp?: Date
   ): CanonicalEvent<T> {
     const tenantId = this.options?.tenantId ?? 'default_tenant';
     const sessionId = this.options?.sessionId ?? 'default_session';
@@ -153,12 +172,22 @@ export class MockConnector extends BaseConnector {
     // CRITICAL ENFORCEMENT: roomUser MUST always have user: null
     const enforcedUser = type === 'roomUser' ? null : user;
 
+    let eventTimestamp: Date;
+    if (explicitTimestamp) {
+      eventTimestamp = explicitTimestamp;
+    } else {
+      const now = Date.now();
+      const nextTime = Math.max(now, this.lastSimulatedTimestamp + 1);
+      this.lastSimulatedTimestamp = nextTime;
+      eventTimestamp = new Date(nextTime);
+    }
+
     const event: CanonicalEvent<T> = {
-      id: sourceEventId || uuidv4(),
+      ...(sourceEventId ? { id: sourceEventId } : {}),
       tenantId,
       sessionId,
       eventType: type,
-      eventTimestamp: new Date(),
+      eventTimestamp,
       user: enforcedUser,
       payload,
       source: {
@@ -188,6 +217,8 @@ export class MockConnector extends BaseConnector {
       const rawPayload = typeOrParams.payload || typeOrParams.data || {};
       const rawUser = typeOrParams.user ?? null;
       const rawId = typeOrParams.id || typeOrParams.eventId;
+      const rawTimestamp = typeOrParams.eventTimestamp || typeOrParams.timestamp || typeOrParams.occurredAt;
+      const explicitTimestamp = rawTimestamp ? new Date(rawTimestamp) : undefined;
 
       let normalizedUser: NormalizedUser | null = null;
       if (rawUser && rawType !== 'roomUser') {
@@ -200,7 +231,7 @@ export class MockConnector extends BaseConnector {
         normalizedUser = {
           platform: 'tiktok',
           platformUserId: rawUser.platformUserId ?? null,
-          uniqueId: rawUser.uniqueId ? String(rawUser.uniqueId).replace(/^@/, '').toLowerCase().trim() : null,
+          uniqueId: rawUser.uniqueId ? String(rawUser.uniqueId).trim().replace(/^@+/, '').toLowerCase() : null,
           nickname: rawUser.nickname ?? rawUser.uniqueId ?? 'TikTok Viewer',
           avatarUrl: rawUser.avatarUrl ?? null,
           verified: rawUser.verified ?? false,
@@ -211,7 +242,7 @@ export class MockConnector extends BaseConnector {
         };
       }
 
-      return this.simulateCanonicalEvent(rawType, rawPayload, normalizedUser, rawId);
+      return this.simulateCanonicalEvent(rawType, rawPayload, normalizedUser, rawId, explicitTimestamp);
     }
 
     return this.simulateCanonicalEvent(typeOrParams, payload, user, sourceEventId);
@@ -221,14 +252,16 @@ export class MockConnector extends BaseConnector {
    * Simulates a 'member' (viewer join) event.
    */
   public simulateMember(
-    customUser?: Partial<NormalizedUser>,
-    joinMethod: string = 'enter_room'
+    customUser?: Partial<NormalizedUser> & { id?: string },
+    joinMethod: string = 'enter_room',
+    overrides?: { id?: string }
   ): CanonicalEvent<MemberPayload> {
     const user: NormalizedUser = {
       ...FIXTURE_USERS.TIER1_ALICE,
       ...customUser,
     };
-    return this.simulateCanonicalEvent<MemberPayload>('member', { joinMethod, sourceFields: {} }, user);
+    const explicitId = overrides?.id ?? (customUser as any)?.id;
+    return this.simulateCanonicalEvent<MemberPayload>('member', { joinMethod, sourceFields: {} }, user, explicitId);
   }
 
   /**
@@ -236,13 +269,15 @@ export class MockConnector extends BaseConnector {
    */
   public simulateChat(
     comment: string,
-    userOverrides?: Partial<NormalizedUser>,
-    messageId?: string
+    userOverrides?: Partial<NormalizedUser> & { id?: string },
+    messageId?: string,
+    overrides?: { id?: string }
   ): CanonicalEvent<ChatPayload> {
     const user: NormalizedUser = {
       ...FIXTURE_USERS.TIER1_BOB,
       ...userOverrides,
     };
+    const explicitId = overrides?.id ?? (userOverrides as any)?.id;
     return this.simulateCanonicalEvent<ChatPayload>(
       'chat',
       {
@@ -251,7 +286,8 @@ export class MockConnector extends BaseConnector {
         messageId: messageId ?? `msg_${Date.now()}_${Math.random().toString(36).substring(7)}`,
         emotes: [],
       },
-      user
+      user,
+      explicitId
     );
   }
 
@@ -263,7 +299,8 @@ export class MockConnector extends BaseConnector {
     diamondCount?: number,
     repeatCount: number = 1,
     repeatEnd: boolean = true,
-    userOverrides?: Partial<NormalizedUser>
+    userOverrides?: Partial<NormalizedUser> & { id?: string },
+    overrides?: { id?: string }
   ): CanonicalEvent<GiftPayload> {
     const matchedGift = FIXTURE_GIFTS.find(
       (g) => g.giftName.toLowerCase() === giftName.toLowerCase()
@@ -276,6 +313,8 @@ export class MockConnector extends BaseConnector {
       ...userOverrides,
     };
 
+    const explicitId = overrides?.id ?? (userOverrides as any)?.id;
+
     return this.simulateCanonicalEvent<GiftPayload>(
       'gift',
       {
@@ -287,7 +326,8 @@ export class MockConnector extends BaseConnector {
         giftType: 1,
         groupId: `group_${Date.now()}`,
       },
-      user
+      user,
+      explicitId
     );
   }
 
@@ -297,7 +337,8 @@ export class MockConnector extends BaseConnector {
   public simulateLike(
     likeCount: number = 5,
     totalLikes?: number,
-    userOverrides?: Partial<NormalizedUser>
+    userOverrides?: Partial<NormalizedUser> & { id?: string },
+    overrides?: { id?: string }
   ): CanonicalEvent<LikePayload> {
     this.totalLikesAccumulator += likeCount;
     const finalTotalLikes = totalLikes !== undefined ? totalLikes : this.totalLikesAccumulator;
@@ -307,25 +348,32 @@ export class MockConnector extends BaseConnector {
       ...userOverrides,
     };
 
+    const explicitId = overrides?.id ?? (userOverrides as any)?.id;
+
     return this.simulateCanonicalEvent<LikePayload>(
       'like',
       {
         likeCount,
         totalLikes: finalTotalLikes,
       },
-      user
+      user,
+      explicitId
     );
   }
 
   /**
    * Simulates a 'follow' event.
    */
-  public simulateFollow(userOverrides?: Partial<NormalizedUser>): CanonicalEvent<FollowPayload> {
+  public simulateFollow(
+    userOverrides?: Partial<NormalizedUser> & { id?: string },
+    overrides?: { id?: string }
+  ): CanonicalEvent<FollowPayload> {
     const user: NormalizedUser = {
       ...FIXTURE_USERS.TIER1_ALICE,
       ...userOverrides,
     };
-    return this.simulateCanonicalEvent<FollowPayload>('follow', { followType: 'live_follow' }, user);
+    const explicitId = overrides?.id ?? (userOverrides as any)?.id;
+    return this.simulateCanonicalEvent<FollowPayload>('follow', { followType: 'live_follow' }, user, explicitId);
   }
 
   /**
@@ -334,20 +382,23 @@ export class MockConnector extends BaseConnector {
   public simulateShare(
     shareType: string = 'whatsapp',
     shareTarget?: string,
-    userOverrides?: Partial<NormalizedUser>
+    userOverrides?: Partial<NormalizedUser> & { id?: string },
+    overrides?: { id?: string }
   ): CanonicalEvent<SharePayload> {
     const target = shareTarget ?? shareType;
     const user: NormalizedUser = {
       ...FIXTURE_USERS.TIER2_CHARLIE,
       ...userOverrides,
     };
+    const explicitId = overrides?.id ?? (userOverrides as any)?.id;
     return this.simulateCanonicalEvent<SharePayload>(
       'share',
       {
         shareType,
         shareTarget: target,
       },
-      user
+      user,
+      explicitId
     );
   }
 
@@ -355,14 +406,19 @@ export class MockConnector extends BaseConnector {
    * Simulates a 'roomUser' viewer count pulse.
    * STRICTLY sets user: null.
    */
-  public simulateRoomUser(viewerCount?: number): CanonicalEvent<RoomUserPayload> {
+  public simulateRoomUser(
+    viewerCount?: number,
+    overrides?: { id?: string }
+  ): CanonicalEvent<RoomUserPayload> {
     if (viewerCount !== undefined) {
       this.currentViewerCount = viewerCount;
     }
+    const explicitId = overrides?.id;
     return this.simulateCanonicalEvent<RoomUserPayload>(
       'roomUser',
       { viewerCount: this.currentViewerCount },
-      null // GUARANTEED NULL
+      null, // GUARANTEED NULL
+      explicitId
     );
   }
 

@@ -24,11 +24,28 @@ export class LiveTikTokConnector extends BaseConnector {
     creatorUsername: string,
     options?: ConnectorOptions
   ): Promise<ConnectionResult> {
+    if (this.status === 'disconnected' || this.status === 'ended' || this.status === 'failed') {
+      return {
+        success: false,
+        status: this.status,
+        error: `Connector is in terminal state (${this.status})`,
+      };
+    }
+
+    const normalized = this.normalizeCreatorUsername(creatorUsername);
+    if (!normalized || normalized.length === 0) {
+      return {
+        success: false,
+        status: 'failed',
+        error: 'Creator username cannot be empty',
+      };
+    }
+
     this.options = options ?? {
       sessionId: `live_session_${uuidv4()}`,
       tenantId: `live_tenant_${uuidv4()}`,
     };
-    this.creatorUsername = this.normalizeCreatorUsername(creatorUsername);
+    this.creatorUsername = normalized;
     this.isExplicitlyStopped = false;
     this.reconnectAttempts = 0;
 
@@ -252,8 +269,14 @@ export class LiveTikTokConnector extends BaseConnector {
         ? null
         : this.normalizationService.normalizeUserFromEvent(raw, eventType);
 
+    const upstreamId = raw?.msgId
+      ? String(raw.msgId)
+      : raw?.id || raw?.eventId
+      ? String(raw.id || raw.eventId)
+      : undefined;
+
     const canonicalEvent: CanonicalEvent = {
-      id: uuidv4(),
+      ...(upstreamId ? { id: upstreamId } : {}),
       tenantId: this.options.tenantId,
       sessionId: this.options.sessionId,
       eventType,

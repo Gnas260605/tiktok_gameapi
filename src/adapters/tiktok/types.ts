@@ -139,7 +139,7 @@ export type EventPayloadMap = {
  * Canonical Event Envelope emitted by all ITikTokLiveConnector implementations.
  */
 export interface CanonicalEvent<T = Record<string, any>> {
-  id: string;                            // UUIDv4 generated at ingestion
+  id?: string;                           // Upstream ID or explicit test event ID (omitted if absent upstream)
   tenantId: string;                      // Owning tenant UUID
   sessionId: string;                     // Scoped LIVE session UUID
   eventType: EventType;                  // member | chat | gift | like | follow | share | roomUser

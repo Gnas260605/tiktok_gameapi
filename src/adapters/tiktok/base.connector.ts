@@ -12,7 +12,7 @@ import {
  */
 const VALID_TRANSITIONS: Record<ConnectionStatus, ConnectionStatus[]> = {
   queued: ['connecting', 'failed', 'disconnected'],
-  connecting: ['connected', 'failed', 'disconnected'],
+  connecting: ['connected', 'ended', 'failed', 'disconnected'],
   connected: ['reconnecting', 'ended', 'disconnected', 'failed'],
   reconnecting: ['connected', 'ended', 'failed', 'disconnected'],
   disconnected: [], // Terminal

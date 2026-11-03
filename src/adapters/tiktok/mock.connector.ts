@@ -197,6 +197,7 @@ export class MockConnector extends BaseConnector {
     };
 
     this.safeEmit(type, event);
+    this.safeEmit('event', event);
     return event;
   }
 

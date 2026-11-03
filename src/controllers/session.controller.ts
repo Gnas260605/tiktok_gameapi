@@ -18,6 +18,7 @@ export function registerSessionRoutes(
         creatorUsername?: string;
         reconnect?: boolean;
         mode?: 'mock' | 'live';
+        mockTickerIntervalMs?: number;
       };
 
       if (!body.creatorUsername) {
@@ -36,6 +37,7 @@ export function registerSessionRoutes(
         creatorUsername: body.creatorUsername,
         reconnect: body.reconnect ?? true,
         mode: body.mode,
+        mockTickerIntervalMs: body.mockTickerIntervalMs,
       });
 
       reply.status(202).send({

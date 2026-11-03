@@ -63,18 +63,16 @@ describe('MockConnector Unit Tests', () => {
     await connector.connect('ticker_streamer');
 
     const tickEvents: any[] = [];
-    connector.on('like', (e) => tickEvents.push(e));
-    connector.on('chat', (e) => tickEvents.push(e));
-    connector.on('gift', (e) => tickEvents.push(e));
+    connector.on('event', (e) => tickEvents.push(e));
 
-    connector.startTicker(20);
-    await new Promise((r) => setTimeout(r, 120));
+    connector.startTicker(15);
+    await new Promise((r) => setTimeout(r, 200));
     connector.stopTicker();
 
     const countBefore = tickEvents.length;
     expect(countBefore).toBeGreaterThan(0);
 
-    await new Promise((r) => setTimeout(r, 60));
+    await new Promise((r) => setTimeout(r, 80));
     expect(tickEvents.length).toBe(countBefore); // No new events after stop
 
     await connector.disconnect();

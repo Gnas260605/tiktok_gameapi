@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikUser LIVE — TikTok Broadcast Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090b10;
+      --bg-card: rgba(18, 22, 34, 0.75);
+      --bg-card-hover: rgba(26, 32, 50, 0.85);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-glow: rgba(254, 44, 85, 0.3);
+      --tiktok-red: #fe2c55;
+      --tiktok-cyan: #25f4ee;
+      --gold: #ffd000;
+      --purple: #9b51e0;
+      --emerald: #00f2a9;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --font-display: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(254, 44, 85, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(37, 244, 238, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(155, 81, 224, 0.04) 0%, transparent 60%);
+      color: var(--text-main);
+      font-family: var(--font-display);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation */
+    header {
+      background: rgba(11, 14, 22, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0.85rem 1.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--tiktok-red), var(--tiktok-cyan));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: #fff;
+      box-shadow: 0 0 20px rgba(254, 44, 85, 0.4);
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-title span {
+      background: linear-gradient(90deg, var(--tiktok-red), var(--tiktok-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .nav-status {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      font-size: 0.85rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      font-weight: 500;
+    }
+
+    .beacon {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6b7280;
+      box-shadow: 0 0 8px #6b7280;
+      transition: all 0.3s ease;
+    }
+
+    .beacon.connected {
+      background: var(--emerald);
+      box-shadow: 0 0 12px var(--emerald);
+      animation: pulse-beacon 2s infinite;
+    }
+
+    .beacon.connecting {
+      background: var(--gold);
+      box-shadow: 0 0 12px var(--gold);
+    }
+
+    .beacon.error {
+      background: var(--tiktok-red);
+      box-shadow: 0 0 12px var(--tiktok-red);
+    }
+
+    @keyframes pulse-beacon {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      padding: 1.5rem 1.75rem;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Control Panel Card */
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      transition: border-color 0.3s;
+    }
+
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.14);
+    }
+
+    .panel-header {
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-header h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .input-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .input-field {
+      width: 100%;
+      background: rgba(11, 14, 22, 0.9);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--tiktok-cyan);
+      box-shadow: 0 0 16px rgba(37, 244, 238, 0.2);
+    }
+
+    .username-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .username-prefix {
+      position: absolute;
+      left: 1rem;
+      color: var(--tiktok-red);
+      font-weight: 700;
+      font-size: 1.05rem;
+      pointer-events: none;
+    }
+
+    .username-input {
+      padding-left: 2.2rem;
+    }
+
+    /* Segmented Mode Selector */
+    .mode-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      background: rgba(11, 14, 22, 0.9);
+      padding: 0.35rem;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 1.25rem;
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.55rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .mode-btn.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .mode-btn.active.mock {
+      background: linear-gradient(135deg, rgba(0, 242, 169, 0.2), rgba(37, 244, 238, 0.2));
+      border: 1px solid rgba(0, 242, 169, 0.4);
+      color: #fff;
+    }
+
+    .mode-btn.active.live {
+      background: linear-gradient(135deg, rgba(254, 44, 85, 0.25), rgba(255, 59, 48, 0.25));
+      border: 1px solid rgba(254, 44, 85, 0.4);
+      color: #fff;
+    }
+
+    /* Action Buttons */
+    .btn {
+      width: 100%;
+      border: none;
+      padding: 0.85rem 1.25rem;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-connect {
+      background: linear-gradient(135deg, var(--tiktok-red), #d61f43);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(254, 44, 85, 0.4);
+    }
+
+    .btn-connect:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(254, 44, 85, 0.6);
+      filter: brightness(1.1);
+    }
+
+    .btn-connect:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-disconnect {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .btn-disconnect:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Room Stat Badges */
+    .room-card {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .room-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .avatar-wrapper {
+      position: relative;
+    }
+
+    .streamer-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--tiktok-red);
+      background: #1e2433;
+    }
+
+    .live-tag {
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--tiktok-red);
+      font-size: 0.6rem;
+      font-weight: 800;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .streamer-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .streamer-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .streamer-handle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .stat-box {
+      background: rgba(11, 14, 22, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+    }
+
+    .stat-label {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: #fff;
+    }
+
+    .stat-value.gold { color: var(--gold); }
+    .stat-value.red { color: var(--tiktok-red); }
+    .stat-value.cyan { color: var(--tiktok-cyan); }
+
+    /* Mock Injector Tools */
+    .mock-tools {
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .mock-tools h4 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .mock-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .btn-mock {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 0.78rem;
+      padding: 0.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-mock:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Main Live Feed Card */
+    .feed-card {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 120px);
+      min-height: 600px;
+    }
+
+    .feed-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .filter-tab {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-tab.active {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border-color: var(--border-subtle);
+    }
+
+    .feed-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-icon {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 0.4rem 0.7rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-icon:hover {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Stream Feed Container */
+    .events-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      scroll-behavior: smooth;
+    }
+
+    .events-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .events-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 9999px;
+    }
+
+    /* Event Items */
+    .event-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      padding: 0.75rem 1rem;
+      background: rgba(14, 18, 28, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      animation: slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.2s;
+    }
+
+    .event-item:hover {
+      background: rgba(20, 26, 40, 0.8);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    @keyframes slide-in {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .event-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #1f2937;
+      flex-shrink: 0;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .event-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .event-user-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .event-username {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: #fff;
+    }
+
+    .event-handle {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+
+    .event-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .badge-tier1 { background: rgba(37, 244, 238, 0.2); color: var(--tiktok-cyan); border: 1px solid rgba(37, 244, 238, 0.3); }
+    .badge-tier2 { background: rgba(255, 208, 0, 0.15); color: var(--gold); border: 1px solid rgba(255, 208, 0, 0.3); }
+    .badge-tier3 { background: rgba(156, 163, 175, 0.15); color: var(--text-muted); }
+
+    .event-time {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      margin-left: auto;
+    }
+
+    .event-body {
+      font-size: 0.92rem;
+      line-height: 1.4;
+      color: var(--text-main);
+      word-break: break-word;
+    }
+
+    /* Event Type Styles */
+    .event-item.gift {
+      background: linear-gradient(90deg, rgba(255, 208, 0, 0.12), rgba(254, 44, 85, 0.08));
+      border-color: rgba(255, 208, 0, 0.3);
+    }
+
+    .gift-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.25rem;
+    }
+
+    .gift-icon {
+      font-size: 1.5rem;
+    }
+
+    .gift-title {
+      font-weight: 800;
+      color: var(--gold);
+      font-size: 0.95rem;
+    }
+
+    .gift-diamonds {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: rgba(255, 208, 0, 0.15);
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .gift-combo {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: var(--tiktok-red);
+      margin-left: auto;
+      font-style: italic;
+      text-shadow: 0 0 10px rgba(254, 44, 85, 0.5);
+    }
+
+    .event-item.like {
+      background: rgba(254, 44, 85, 0.06);
+      border-color: rgba(254, 44, 85, 0.2);
+    }
+
+    .like-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--tiktok-red);
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+
+    .event-item.member {
+      background: rgba(0, 242, 169, 0.05);
+      border-color: rgba(0, 242, 169, 0.2);
+    }
+
+    .member-badge {
+      color: var(--emerald);
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    /* Floating Heart Animation */
+    .floating-hearts-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 3rem;
+      width: 100px;
+      height: 300px;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .heart-particle {
+      position: absolute;
+      bottom: 0;
+      font-size: 1.5rem;
+      animation: float-heart 2s ease-out forwards;
+    }
+
+    @keyframes float-heart {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(0.6) rotate(0deg);
+      }
+      50% {
+        transform: translateY(-120px) scale(1.2) rotate(-15deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-240px) scale(1.4) rotate(15deg);
+      }
+    }
+
+    /* Empty state */
+    .empty-state {
+      margin: auto;
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-dim);
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.4;
+    }
+
+    .empty-state p {
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-title">TikUser <span>LIVE</span></div>
+      <div class="brand-badge">API v1.1.0</div>
+    </div>
+
+    <div class="nav-status">
+      <div class="status-pill">
+        <div id="connectionBeacon" class="beacon"></div>
+        <span id="connectionStatusText">Sẵn sàng kết nối</span>
+      </div>
+      <a href="/docs" target="_blank" style="color: var(--text-muted); text-decoration: none; font-weight: 600;">Swagger Docs ↗</a>
+    </div>
+  </header>
+
+  <!-- Main Grid Layout -->
+  <main>
+    <!-- Left Column: Control Panel -->
+    <aside class="glass-card">
+      <div class="panel-header">
+        <h2>🎮 Điều khiển kết nối</h2>
+      </div>
+
+      <!-- Mode Selector -->
+      <div class="mode-selector">
+        <button id="modeMockBtn" class="mode-btn active mock" onclick="setMode('mock')">
+          🟢 Mock Simulator
+        </button>
+        <button id="modeLiveBtn" class="mode-btn live" onclick="setMode('live')">
+          🔴 TikTok LIVE Thật
+        </button>
+      </div>
+
+      <!-- Creator Username Input -->
+      <div class="input-group">
+        <label class="input-label" for="usernameInput">TikTok Creator Username</label>
+        <div class="username-wrapper">
+          <span class="username-prefix">@</span>
+          <input
+            id="usernameInput"
+            class="input-field username-input"
+            type="text"
+            placeholder="alice_wanderer"
+            value="alice_wanderer"
+            autocomplete="off"
+            spellcheck="false"
+          >
+        </div>
+      </div>
+
+      <!-- API Key Input -->
+      <div class="input-group">
+        <label class="input-label" for="apiKeyInput">Tenant API Key</label>
+        <input
+          id="apiKeyInput"
+          class="input-field"
+          type="password"
+          value="tik_live_acme_secret_key_1234567890abcdef"
+          placeholder="tik_live_..."
+        >
+      </div>
+
+      <!-- Action Button -->
+      <button id="connectBtn" class="btn btn-connect" onclick="toggleConnect()">
+        <span>🚀 Bắt đầu kết nối</span>
+      </button>
+
+      <!-- Active Room Status Card -->
+      <div id="roomCard" class="room-card" style="display: none;">
+        <div class="room-header">
+          <div class="avatar-wrapper">
+            <img id="streamerAvatar" class="streamer-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120" alt="Avatar">
+            <span class="live-tag">LIVE</span>
+          </div>
+          <div class="streamer-info">
+            <div id="streamerName" class="streamer-name">Alice in LiveLand</div>
+            <div id="streamerHandle" class="streamer-handle">@alice_wanderer</div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Tổng sự kiện</div>
+            <div id="totalEventsStat" class="stat-value cyan">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Kim cương 💎</div>
+            <div id="totalDiamondsStat" class="stat-value gold">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Bình luận 💬</div>
+            <div id="totalChatStat" class="stat-value">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Lượt thích ❤️</div>
+            <div id="totalLikesStat" class="stat-value red">0</div>
+          </div>
+        </div>
+
+        <!-- Mock Injector Controls for Demonstration -->
+        <div id="mockTools" class="mock-tools">
+          <h4>🧪 Bắn sự kiện thử nghiệm (Mock)</h4>
+          <div class="mock-buttons">
+            <button class="btn-mock" onclick="injectMockEvent('chat')">💬 Gửi Chat</button>
+            <button class="btn-mock" onclick="injectMockEvent('gift')">🎁 Gửi Quà</button>
+            <button class="btn-mock" onclick="injectMockEvent('like')">❤️ Bắn Like</button>
+            <button class="btn-mock" onclick="injectMockEvent('member')">🚪 Vào Phòng</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Right Column: Real-time Live Event Stream -->
+    <section class="glass-card feed-card">
+      <div class="feed-toolbar">
+        <div class="filter-tabs">
+          <button class="filter-tab active" onclick="setFilter('all', this)">Tất cả (<span id="countAll">0</span>)</button>
+          <button class="filter-tab" onclick="setFilter('chat', this)">Bình luận (<span id="countChat">0</span>)</button>
+          <button class="filter-tab" onclick="setFilter('gift', this)">Quà tặng (<span id="countGift">0</span>)</button>
+          <button class="filter-tab" onclick="setFilter('member', this)">Tham gia (<span id="countMember">0</span>)</button>
+        </div>
+
+        <div class="feed-actions">
+          <button class="btn-icon" onclick="toggleAudio()" id="audioBtn" title="Bật/Tắt âm thanh hiệu ứng">🔔 Âm thanh: BẬT</button>
+          <button class="btn-icon" onclick="clearFeed()" title="Xóa màn hình feed">🧹 Xóa</button>
+        </div>
+      </div>
+
+      <!-- Feed List -->
+      <div id="eventsContainer" class="events-container">
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">📡</div>
+          <h3>Chưa có phiên LIVE kết nối</h3>
+          <p>Nhập username TikTok ở cột bên trái và nhấn <strong>Bắt đầu kết nối</strong> để theo dõi trực tiếp.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Heart Particle Container -->
+  <div id="heartsContainer" class="floating-hearts-container"></div>
+
+  <script>
+    // App State
+    let currentMode = 'mock';
+    let currentSessionId = null;
+    let currentWebSocket = null;
+    let isConnected = false;
+    let audioEnabled = true;
+    let currentFilter = 'all';
+
+    let stats = {
+      total: 0,
+      chat: 0,
+      gift: 0,
+      like: 0,
+      member: 0,
+      diamonds: 0,
+    };
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playTone(freq, duration, type = 'sine') {
+      if (!audioEnabled || !audioCtx) return;
+      try {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        // audio context blocked
+      }
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      document.getElementById('audioBtn').innerText = audioEnabled ? '🔔 Âm thanh: BẬT' : '🔕 Âm thanh: TẮT';
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      const mockBtn = document.getElementById('modeMockBtn');
+      const liveBtn = document.getElementById('modeLiveBtn');
+      if (mode === 'mock') {
+        mockBtn.className = 'mode-btn active mock';
+        liveBtn.className = 'mode-btn live';
+        document.getElementById('usernameInput').value = 'alice_wanderer';
+      } else {
+        liveBtn.className = 'mode-btn active live';
+        mockBtn.className = 'mode-btn mock';
+        document.getElementById('usernameInput').placeholder = 'nhập tên tiktok thật...';
+      }
+    }
+
+    function updateBeacon(status, text) {
+      const beacon = document.getElementById('connectionBeacon');
+      const label = document.getElementById('connectionStatusText');
+      beacon.className = 'beacon ' + status;
+      label.innerText = text;
+    }
+
+    async function toggleConnect() {
+      if (isConnected) {
+        await disconnect();
+      } else {
+        await connect();
+      }
+    }
+
+    async function connect() {
+      const usernameInput = document.getElementById('usernameInput');
+      const apiKeyInput = document.getElementById('apiKeyInput');
+      const connectBtn = document.getElementById('connectBtn');
+
+      const rawUsername = usernameInput.value.trim().replace(/^@+/, '');
+      const apiKey = apiKeyInput.value.trim();
+
+      if (!rawUsername) {
+        alert('Vui lòng nhập TikTok username');
+        return;
+      }
+      if (!apiKey) {
+        alert('Vui lòng nhập API Key');
+        return;
+      }
+
+      connectBtn.disabled = true;
+      connectBtn.innerHTML = '<span>⏳ Đang kết nối...</span>';
+      updateBeacon('connecting', 'Đang thiết lập phiên LIVE...');
+
+      try {
+        // 1. Create Session
+        const sessionRes = await fetch('/api/v1/live/sessions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            creatorUsername: rawUsername,
+            mode: currentMode,
+            reconnect: true,
+            mockTickerIntervalMs: currentMode === 'mock' ? 2000 : undefined,
+          }),
+        });
+
+        const sessionJson = await sessionRes.json();
+        if (!sessionRes.ok) {
+          throw new Error(sessionJson.error?.message || 'Không thể tạo phiên LIVE');
+        }
+
+        const session = sessionJson.data;
+        currentSessionId = session.id;
+
+        // Update UI
+        document.getElementById('streamerName').innerText = session.creatorUsername;
+        document.getElementById('streamerHandle').innerText = '@' + session.creatorUsername;
+        document.getElementById('roomCard').style.display = 'block';
+        document.getElementById('mockTools').style.display = currentMode === 'mock' ? 'block' : 'none';
+
+        // 2. Request Realtime Ticket
+        const ticketRes = await fetch('/api/v1/realtime/tickets', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            sessionIds: [currentSessionId],
+          }),
+        });
+
+        const ticketJson = await ticketRes.json();
+        if (!ticketRes.ok) {
+          throw new Error(ticketJson.error?.message || 'Không thể lấy ticket WebSocket');
+        }
+
+        const ticket = ticketJson.data.ticket;
+
+        // 3. Connect WebSocket
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        
+        currentWebSocket = new WebSocket(wsUrl);
+
+        currentWebSocket.onopen = () => {
+          // Authenticate
+          currentWebSocket.send(JSON.stringify({
+            action: 'authenticate',
+            ticket: ticket,
+          }));
+        };
+
+        currentWebSocket.onmessage = (event) => {
+          handleServerMessage(JSON.parse(event.data));
+        };
+
+        currentWebSocket.onclose = () => {
+          handleSocketClosed();
+        };
+
+        currentWebSocket.onerror = (err) => {
+          console.error('WebSocket Error:', err);
+        };
+
+        isConnected = true;
+        connectBtn.disabled = false;
+        connectBtn.className = 'btn btn-disconnect';
+        connectBtn.innerHTML = '<span>⏹ Ngắt kết nối</span>';
+        usernameInput.disabled = true;
+
+      } catch (err) {
+        alert('Lỗi: ' + err.message);
+        updateBeacon('error', 'Lỗi kết nối: ' + err.message);
+        connectBtn.disabled = false;
+        connectBtn.className = 'btn btn-connect';
+        connectBtn.innerHTML = '<span>🚀 Bắt đầu kết nối</span>';
+        usernameInput.disabled = false;
+      }
+    }
+
+    async function disconnect() {
+      const apiKey = document.getElementById('apiKeyInput').value.trim();
+      const connectBtn = document.getElementById('connectBtn');
+      connectBtn.disabled = true;
+
+      if (currentWebSocket) {
+        currentWebSocket.close();
+        currentWebSocket = null;
+      }
+
+      if (currentSessionId) {
+        try {
+          await fetch(`/api/v1/live/sessions/${currentSessionId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+            },
+          });
+        } catch (e) {
+          console.warn('Disconnect request failed:', e);
+        }
+      }
+
+      handleSocketClosed();
+    }
+
+    function handleSocketClosed() {
+      isConnected = false;
+      currentWebSocket = null;
+      const connectBtn = document.getElementById('connectBtn');
+      connectBtn.disabled = false;
+      connectBtn.className = 'btn btn-connect';
+      connectBtn.innerHTML = '<span>🚀 Bắt đầu kết nối</span>';
+      document.getElementById('usernameInput').disabled = false;
+      updateBeacon('', 'Đã ngắt kết nối');
+    }
+
+    function handleServerMessage(msg) {
+      if (msg.type === 'authenticated') {
+        // Subscribe to current session
+        currentWebSocket.send(JSON.stringify({
+          action: 'subscribe',
+          sessionId: currentSessionId,
+        }));
+      } else if (msg.type === 'subscribed') {
+        updateBeacon('connected', `Đang LIVE: @${document.getElementById('usernameInput').value.trim()}`);
+        const empty = document.getElementById('emptyState');
+        if (empty) empty.style.display = 'none';
+      } else if (msg.type === 'event') {
+        renderEvent(msg.event);
+      }
+    }
+
+    function renderEvent(event) {
+      stats.total++;
+      document.getElementById('totalEventsStat').innerText = stats.total;
+      document.getElementById('countAll').innerText = stats.total;
+
+      const container = document.getElementById('eventsContainer');
+      const empty = document.getElementById('emptyState');
+      if (empty) empty.style.display = 'none';
+
+      const item = document.createElement('div');
+      item.className = `event-item ${event.type}`;
+      item.dataset.type = event.type;
+
+      if (currentFilter !== 'all' && currentFilter !== event.type) {
+        item.style.display = 'none';
+      }
+
+      const user = event.user || {
+        uniqueId: 'viewer_' + Math.floor(Math.random() * 900 + 100),
+        nickname: 'TikTok Viewer',
+        avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
+        identityQuality: 'event_only',
+      };
+
+      const timeStr = new Date(event.occurredAt || Date.now()).toLocaleTimeString();
+
+      let tierBadge = '';
+      if (user.identityQuality === 'platform_id') {
+        tierBadge = '<span class="event-badge badge-tier1">Verified ID</span>';
+      } else if (user.identityQuality === 'handle_fallback') {
+        tierBadge = '<span class="event-badge badge-tier2">Handle</span>';
+      }
+
+      let eventBody = '';
+
+      if (event.type === 'chat') {
+        stats.chat++;
+        document.getElementById('totalChatStat').innerText = stats.chat;
+        document.getElementById('countChat').innerText = stats.chat;
+        playTone(600, 0.08, 'sine');
+
+        eventBody = `<div class="event-body">${escapeHtml(event.data?.text || event.data?.comment || '')}</div>`;
+      } else if (event.type === 'gift') {
+        stats.gift++;
+        const diamonds = (event.data?.diamondCount || 1) * (event.data?.repeatCount || 1);
+        stats.diamonds += diamonds;
+        document.getElementById('totalDiamondsStat').innerText = stats.diamonds;
+        document.getElementById('countGift').innerText = stats.gift;
+        playTone(880, 0.25, 'triangle');
+
+        eventBody = `
+          <div class="gift-banner">
+            <span class="gift-icon">🎁</span>
+            <div>
+              <div class="gift-title">Đã tặng ${escapeHtml(event.data?.giftName || 'Gift')}</div>
+              <div class="gift-diamonds">💎 +${diamonds} kim cương</div>
+            </div>
+            <div class="gift-combo">x${event.data?.repeatCount || 1}</div>
+          </div>
+        `;
+      } else if (event.type === 'like') {
+        stats.like += (event.data?.likeCount || 1);
+        document.getElementById('totalLikesStat').innerText = stats.like;
+        playTone(520, 0.05, 'sine');
+        spawnFloatingHeart();
+
+        eventBody = `
+          <div class="like-badge">
+            <span>❤️</span> Đã thả ${event.data?.likeCount || 1} tim!
+          </div>
+        `;
+      } else if (event.type === 'member') {
+        stats.member++;
+        document.getElementById('countMember').innerText = stats.member;
+        playTone(440, 0.05, 'sine');
+
+        eventBody = `
+          <div class="member-badge">
+            🚪 Đã tham gia phòng LIVE
+          </div>
+        `;
+      }
+
+      item.innerHTML = `
+        <img class="event-avatar" src="${escapeHtml(user.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100')}" alt="Avatar">
+        <div class="event-content">
+          <div class="event-user-row">
+            <span class="event-username">${escapeHtml(user.nickname || user.uniqueId)}</span>
+            <span class="event-handle">@${escapeHtml(user.uniqueId || '')}</span>
+            ${tierBadge}
+            <span class="event-time">${timeStr}</span>
+          </div>
+          ${eventBody}
+        </div>
+      `;
+
+      container.appendChild(item);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function spawnFloatingHeart() {
+      const container = document.getElementById('heartsContainer');
+      const heart = document.createElement('div');
+      heart.className = 'heart-particle';
+      const emojis = ['❤️', '💖', '🔥', '✨', '💎'];
+      heart.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+      heart.style.left = (Math.random() * 60) + 'px';
+      container.appendChild(heart);
+      setTimeout(() => heart.remove(), 2000);
+    }
+
+    function setFilter(filter, tabEl) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      tabEl.classList.add('active');
+
+      const items = document.querySelectorAll('.event-item');
+      items.forEach(item => {
+        if (filter === 'all' || item.dataset.type === filter) {
+          item.style.display = 'flex';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    function clearFeed() {
+      const container = document.getElementById('eventsContainer');
+      container.innerHTML = `
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">🧹</div>
+          <p>Màn hình feed đã được dọn sạch.</p>
+        </div>
+      `;
+    }
+
+    // Mock Event Injector
+    function injectMockEvent(type) {
+      if (!isConnected || !currentSessionId) {
+        alert('Vui lòng kết nối phiên LIVE trước!');
+        return;
+      }
+
+      const sampleUsers = [
+        { uniqueId: 'alice_wanderer', nickname: 'Alice in LiveLand', identityQuality: 'platform_id' },
+        { uniqueId: 'bob_the_builder', nickname: 'Bob B.', identityQuality: 'platform_id' },
+        { uniqueId: 'charlie_chaplin', nickname: 'Charlie', identityQuality: 'handle_fallback' },
+      ];
+      const randomUser = sampleUsers[Math.floor(Math.random() * sampleUsers.length)];
+
+      let eventData = {};
+      if (type === 'chat') {
+        const comments = [
+          'Live xịn quá streamer ơi!',
+          'Chào mọi người trong room nhé 👋',
+          'Thả tim nhiệt tình nào cả nhà ơi ❤️❤️❤️',
+          'Có giao lưu PK tối nay không idol?',
+          'Tuyệt vời quá!',
+        ];
+        eventData = { text: comments[Math.floor(Math.random() * comments.length)] };
+      } else if (type === 'gift') {
+        const gifts = [
+          { name: 'Rose', count: 1, repeat: 10 },
+          { name: 'TikTok Cap', count: 99, repeat: 1 },
+          { name: 'Lion & Castle', count: 29999, repeat: 1 },
+          { name: 'Galaxy Heart', count: 1000, repeat: 5 },
+        ];
+        const g = gifts[Math.floor(Math.random() * gifts.length)];
+        eventData = { giftName: g.name, diamondCount: g.count, repeatCount: g.repeat };
+      } else if (type === 'like') {
+        eventData = { likeCount: Math.floor(Math.random() * 15 + 1) };
+      } else if (type === 'member') {
+        eventData = { joinMethod: 'enter_room' };
+      }
+
+      renderEvent({
+        eventId: 'local_' + Date.now(),
+        sessionId: currentSessionId,
+        type: type,
+        occurredAt: new Date().toISOString(),
+        user: randomUser,
+        data: eventData,
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

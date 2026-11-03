@@ -14,6 +14,7 @@ export interface CreateSessionOptions {
   creatorUsername: string;
   reconnect?: boolean;
   mode?: 'mock' | 'live';
+  mockTickerIntervalMs?: number;
 }
 
 export class SessionService {
@@ -103,6 +104,7 @@ export class SessionService {
       sessionId: session.id,
       isMock: options.mode === 'mock' ? true : (options.mode === 'live' ? false : undefined),
       maxReconnectAttempts: options.reconnect === false ? 0 : 5,
+      mockTickerIntervalMs: options.mockTickerIntervalMs,
     };
 
     const connector = ConnectorFactory.createConnector(connectorOptions);

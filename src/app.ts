@@ -28,6 +28,7 @@ import { registerUserRoutes } from './controllers/user.controller';
 import { registerEventRoutes } from './controllers/event.controller';
 import { registerRealtimeRoutes } from './controllers/realtime.controller';
 import { registerApiKeyRoutes } from './controllers/api-key.controller';
+import { registerDashboardRoutes } from './controllers/dashboard.controller';
 
 export interface AppDependencies {
   prisma?: PrismaClient;
@@ -137,7 +138,8 @@ export function buildApp(
     });
   });
 
-  // 5. Register REST Controllers
+  // 5. Register REST Controllers & Dashboard
+  registerDashboardRoutes(app);
   registerHealthRoutes(app, prisma);
   registerSessionRoutes(app, sessionService, authPreHandler);
   registerUserRoutes(app, userRepo, eventRepo, authPreHandler);

@@ -18,6 +18,7 @@ import { RealtimeTicketService } from './services/realtime/ticket.service';
 import { WebSocketManager } from './websocket/websocket-manager';
 import { AuthService } from './services/auth/auth.service';
 import { SessionService } from './services/session/session.service';
+import { CreatorLookupService } from './services/tiktok/creator-lookup.service';
 
 import { createAuthPreHandler } from './middleware/auth.middleware';
 import { errorHandler } from './middleware/error-handler';
@@ -29,6 +30,7 @@ import { registerEventRoutes } from './controllers/event.controller';
 import { registerRealtimeRoutes } from './controllers/realtime.controller';
 import { registerApiKeyRoutes } from './controllers/api-key.controller';
 import { registerDashboardRoutes } from './controllers/dashboard.controller';
+import { registerCreatorRoutes } from './controllers/creator.controller';
 
 export interface AppDependencies {
   prisma?: PrismaClient;
@@ -42,6 +44,7 @@ export interface AppDependencies {
   authService?: AuthService;
   sessionService?: SessionService;
   eventIngestionService?: EventIngestionService;
+  creatorLookupService?: CreatorLookupService;
 }
 
 export function buildApp(
@@ -81,6 +84,8 @@ export function buildApp(
   const sessionService =
     dependencies.sessionService ??
     new SessionService(sessionRepo, tenantSettingsRepo, eventIngestionService);
+
+  const creatorLookupService = dependencies.creatorLookupService ?? new CreatorLookupService();
 
   const authPreHandler = createAuthPreHandler(authService);
 
@@ -146,6 +151,7 @@ export function buildApp(
   registerEventRoutes(app, eventRepo, authPreHandler);
   registerRealtimeRoutes(app, ticketService, sessionRepo, authPreHandler);
   registerApiKeyRoutes(app, authService, authPreHandler);
+  registerCreatorRoutes(app, creatorLookupService, authPreHandler);
 
   // Graceful shutdown hooks
   app.addHook('onClose', async () => {

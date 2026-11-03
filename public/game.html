@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leo Chùa — TikUser LIVE Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0d14;
+      --panel: rgba(14, 17, 28, 0.94);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --accent: #fe2c55;
+      --gold: #ffd000;
+      --font: 'Outfit', system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+    }
+
+    #stage {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #gearBtn {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      font-size: 18px;
+      cursor: pointer;
+      opacity: 0.25;
+      transition: opacity 0.2s;
+    }
+
+    #gearBtn:hover { opacity: 1; }
+
+    #setup {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+    }
+
+    #setup.hidden { display: none; }
+
+    .setup-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+    }
+
+    .setup-card h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .setup-card p.sub {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 18px;
+      line-height: 1.4;
+    }
+
+    .setup-card label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 12px 0 6px;
+    }
+
+    .setup-card input, .setup-card select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0b0e16;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.95rem;
+    }
+
+    .setup-card button {
+      width: 100%;
+      margin-top: 18px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-family: var(--font);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .setup-card button:disabled { opacity: 0.6; cursor: wait; }
+
+    #setupStatus {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      min-height: 1.2em;
+      line-height: 1.4;
+    }
+
+    #setupStatus.error { color: #fca5a5; }
+
+    .rules {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <button id="gearBtn" title="Cài đặt (phím S)">⚙️</button>
+
+  <div id="setup">
+    <form class="setup-card" id="setupForm">
+      <h1>🛕 Leo Chùa</h1>
+      <p class="sub">Người xem leo bậc thang lên chùa bằng bình luận, thả tim và quà. Ai gõ chuông trước thắng vòng.</p>
+
+      <label for="modeSelect">Chế độ</label>
+      <select id="modeSelect">
+        <option value="live">TikTok LIVE thật</option>
+        <option value="mock">Mock server (kiểm thử)</option>
+        <option value="demo">Demo offline (không cần server)</option>
+      </select>
+
+      <div id="connFields">
+        <label for="userInput">ID TikTok đang LIVE</label>
+        <input id="userInput" autocomplete="off" spellcheck="false" placeholder="vd: anvatcomai.food">
+
+        <label for="keyInput">Tenant API Key</label>
+        <input id="keyInput" type="password" autocomplete="off" placeholder="tik_live_...">
+      </div>
+
+      <button type="submit" id="startBtn">▶ Bắt đầu</button>
+      <div id="setupStatus"></div>
+
+      <div class="rules">
+        💬 Bình luận: +2 bậc · ❤️ Thả tim: +1 bậc<br>
+        ➕ Follow: +10 · 🔗 Share: +15<br>
+        🎁 Quà: bay lên theo số kim cương (quà lớn đi cáp treo)<br>
+        🐒 Khỉ cướp dép · 💩 Đau bụng phải vào WC<br>
+        🧻 Gõ <b>giấy</b> để cứu người đang kẹt trong WC
+      </div>
+    </form>
+  </div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // ---------------------------------------------------------------------
+    // Tunables
+    // ---------------------------------------------------------------------
+    const W = 720;
+    const H = 1280;
+    const SUMMIT = 100;
+    const MAX_PLAYERS = 60;
+    const CHAT_COOLDOWN_MS = 2500;
+    const IDLE_KICK_MS = 5 * 60 * 1000;
+    const STUCK_MS = 10000;
+    const PAPER_RESCUE_MS = 2500;
+    const CELEBRATE_MS = 7000;
+    const HAZARD_MIN_MS = 25000;
+    const HAZARD_MAX_MS = 40000;
+    const CABLE_CAR_STEPS = 30;
+
+    const PALETTE = ['#fe2c55', '#25f4ee', '#ffd000', '#9b51e0', '#00f2a9', '#ff8a3d', '#4f8cff', '#ff6fb5'];
+
+    const storage = {
+      get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+      set(key, value) { try { localStorage.setItem(key, value); } catch { /* blocked */ } },
+    };
+
+    // ---------------------------------------------------------------------
+    // Canvas & stairway geometry
+    // ---------------------------------------------------------------------
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    let view = { scale: 1, offX: 0, offY: 0, dpr: 1 };
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+      const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+      view = {
+        scale,
+        dpr,
+        offX: (window.innerWidth - W * scale) / 2,
+        offY: (window.innerHeight - H * scale) / 2,
+      };
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // ---------------------------------------------------------------------
+    // Art assets (public/game-assets). Anything missing falls back to the
+    // vector drawing, so the overlay works with a partial asset set.
+    // ---------------------------------------------------------------------
+    const ASSET_NAMES = [
+      'bg-sky', 'mountain', 'cloud-1', 'cloud-2', 'cloud-3', 'cloud-4', 'pagoda', 'bell-frame',
+      'logo', 'panel', 'wc-hut', 'wc-occupied', 'flag-25', 'flag-50', 'flag-75',
+      'climber-walk-1', 'climber-walk-2', 'climber-walk-3', 'climber-stuck-1', 'climber-stuck-2',
+      'monkey-run-1', 'monkey-run-2', 'monkey-run-3', 'monkey-run-4', 'monkey-run-5',
+      'monkey-sandal-1', 'monkey-sandal-2', 'monkey-sandal-3', 'monkey-sandal-4', 'monkey-sandal-5',
+      'cable-car', 'toilet-paper', 'crown', 'burst', 'win-banner',
+    ];
+    const ASSETS = {};
+    for (const name of ASSET_NAMES) {
+      const img = new Image();
+      img.src = `/game-assets/${name}.png`;
+      ASSETS[name] = img;
+    }
+
+    function art(name) {
+      const img = ASSETS[name];
+      return img && img.complete && img.naturalWidth > 0 ? img : null;
+    }
+
+    // mountain.png (430x426) is drawn at this rect; the stairway below follows
+    // the zig-zag painted on it (image turning points scaled by 700/430).
+    const MOUNTAIN = { x: 10, y: 407, w: 700, h: 693 };
+
+    // Stairway from the foot of the mountain to the pagoda gate
+    const PATH = [[487, 1032], [161, 941], [520, 835], [179, 729], [482, 646], [249, 557], [422, 521]];
+    const SEGMENTS = [];
+    let pathLength = 0;
+    for (let i = 0; i < PATH.length - 1; i++) {
+      const [x1, y1] = PATH[i];
+      const [x2, y2] = PATH[i + 1];
+      const len = Math.hypot(x2 - x1, y2 - y1);
+      SEGMENTS.push({ x1, y1, x2, y2, len, start: pathLength });
+      pathLength += len;
+    }
+
+    function pointAt(fraction) {
+      const target = Math.max(0, Math.min(1, fraction)) * pathLength;
+      const seg = SEGMENTS.find((s) => target <= s.start + s.len) || SEGMENTS[SEGMENTS.length - 1];
+      const t = (target - seg.start) / seg.len;
+      return { x: seg.x1 + (seg.x2 - seg.x1) * t, y: seg.y1 + (seg.y2 - seg.y1) * t };
+    }
+
+    // WC hut anchor: horizontal centre and ground line on the left slope
+    const WC = { x: 72, y: 860 };
+    const BELL = { x: 580, y: 470 };
+
+    // ---------------------------------------------------------------------
+    // Game state
+    // ---------------------------------------------------------------------
+    const players = new Map();
+    const toasts = [];
+    const particles = [];
+    const winners = [];
+    let round = 1;
+    let celebrate = null;   // { player, until }
+    let monkey = null;      // { from, to, start, victim }
+    let cableCars = [];     // { player, start }
+    let nextHazardAt = performance.now() + HAZARD_MIN_MS;
+    let viewerCount = null;
+    let slotCounter = 0;
+    let effects = [];       // { kind: 'burst' | 'paper', start, x, y }
+
+    function colorFor(id) {
+      let hash = 0;
+      for (const ch of id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+      return PALETTE[hash % PALETTE.length];
+    }
+
+    function ensurePlayer(user) {
+      if (!user) return null;
+      const id = String(user.uniqueId || user.platformUserId || user.id || '').toLowerCase();
+      if (!id) return null;
+
+      let player = players.get(id);
+      if (!player) {
+        if (players.size >= MAX_PLAYERS) return null;
+        player = {
+          id,
+          name: user.nickname || id,
+          color: colorFor(id),
+          avatar: null,
+          steps: 0,
+          shown: 0,
+          lastChatAt: 0,
+          stuckUntil: 0,
+          lastActive: performance.now(),
+          slot: slotCounter++ % 5,
+          wins: 0,
+        };
+        if (user.avatarUrl) {
+          const img = new Image();
+          img.referrerPolicy = 'no-referrer';
+          img.src = user.avatarUrl;
+          player.avatar = img;
+        }
+        players.set(id, player);
+      }
+      player.name = user.nickname || player.name;
+      player.lastActive = performance.now();
+      return player;
+    }
+
+    function isStuck(player, now = performance.now()) {
+      return player.stuckUntil > now;
+    }
+
+    function climb(player, steps, reason) {
+      if (!player || celebrate) return;
+      if (isStuck(player)) return;
+      player.steps = Math.min(SUMMIT, player.steps + steps);
+      if (player.steps >= SUMMIT) win(player);
+      else if (reason) toast(reason, player.color);
+    }
+
+    function toast(text, color = '#ffffff') {
+      toasts.unshift({ text, color, born: performance.now() });
+      if (toasts.length > 3) toasts.length = 3;
+    }
+
+    function shortName(name, max = 12) {
+      const chars = Array.from(name);
+      return chars.length > max ? chars.slice(0, max - 1).join('') + '…' : name;
+    }
+
+    function win(player) {
+      player.wins++;
+      winners.unshift({ name: player.name, round });
+      if (winners.length > 5) winners.length = 5;
+      celebrate = { player, until: performance.now() + CELEBRATE_MS };
+      sound.bell();
+      for (let i = 0; i < 140; i++) {
+        particles.push({
+          x: BELL.x, y: BELL.y,
+          vx: (Math.random() - 0.5) * 14,
+          vy: -Math.random() * 12 - 2,
+          color: PALETTE[i % PALETTE.length],
+          life: 1,
+          size: 6 + Math.random() * 6,
+        });
+      }
+    }
+
+    function nextRound() {
+      celebrate = null;
+      round++;
+      monkey = null;
+      cableCars = [];
+      effects = [];
+      for (const p of players.values()) {
+        p.steps = 0;
+        p.shown = 0;
+        p.stuckUntil = 0;
+      }
+      toast(`🔄 Vòng ${round} bắt đầu! Leo lên nào!`, '#ffd000');
+    }
+
+    // ---------------------------------------------------------------------
+    // Viewer events -> game actions
+    // ---------------------------------------------------------------------
+    const PAPER_RE = /gi[aấâ]y|giay|🧻/i;
+
+    function handleEvent(event) {
+      if (event.type === 'roomUser') {
+        viewerCount = event.data?.viewerCount ?? viewerCount;
+        return;
+      }
+
+      const player = ensurePlayer(event.user);
+      if (!player) return;
+      const data = event.data || {};
+      const name = shortName(player.name);
+      const now = performance.now();
+
+      switch (event.type) {
+        case 'member':
+          if (player.steps === 0) toast(`🚶 ${name} bắt đầu leo`, player.color);
+          break;
+
+        case 'chat': {
+          const text = String(data.text || data.comment || '');
+          const stuckOthers = [...players.values()].filter((p) => p !== player && isStuck(p, now));
+          if (PAPER_RE.test(text) && stuckOthers.length > 0) {
+            const target = stuckOthers[Math.floor(Math.random() * stuckOthers.length)];
+            target.stuckUntil -= PAPER_RESCUE_MS;
+            effects.push({ kind: 'paper', start: now, x: W / 2 + (Math.random() - 0.5) * 300, y: H - 80 });
+            toast(`🧻 ${name} ném giấy cho ${shortName(target.name)}`, '#ffffff');
+            break;
+          }
+          if (now - player.lastChatAt < CHAT_COOLDOWN_MS) break;
+          player.lastChatAt = now;
+          climb(player, 2);
+          break;
+        }
+
+        case 'like':
+          climb(player, Math.min(3, Math.max(1, Number(data.likeCount) || 1)));
+          break;
+
+        case 'follow':
+          climb(player, 10, `➕ ${name} follow → +10 bậc`);
+          break;
+
+        case 'share':
+          climb(player, 15, `🔗 ${name} share → +15 bậc`);
+          break;
+
+        case 'gift': {
+          const diamonds = Number(data.totalDiamonds)
+            || (Number(data.diamondCount) || 1) * (Number(data.repeatCount) || 1);
+          const steps = Math.round(4 + 6 * Math.sqrt(diamonds));
+          const giftName = data.giftName || 'quà';
+          sound.ding();
+          if (isStuck(player, now)) {
+            player.stuckUntil = 0;
+            toast(`🎁 ${name} tặng ${giftName} → thoát WC!`, '#ffd000');
+          }
+          if (steps >= CABLE_CAR_STEPS) cableCars.push({ player, start: now });
+          const at = pointAt(player.shown / SUMMIT);
+          effects.push({ kind: 'burst', start: now, x: at.x, y: at.y - 30 });
+          climb(player, steps, `🎁 ${name} tặng ${giftName} → +${steps} bậc`);
+          break;
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // Hazards: monkey steals sandals, sudden stomach ache
+    // ---------------------------------------------------------------------
+    // `forced` ('monkey' | 'wc') lets demo rehearsals trigger a specific hazard
+    function runHazard(now, forced = null) {
+      nextHazardAt = now + HAZARD_MIN_MS + Math.random() * (HAZARD_MAX_MS - HAZARD_MIN_MS);
+      if (celebrate) return;
+      const active = [...players.values()].filter((p) => !isStuck(p, now) && p.steps > 5);
+      if (active.length < 2) return;
+
+      const kind = forced || (Math.random() < 0.5 ? 'monkey' : 'wc');
+      if (kind === 'monkey') {
+        const top = active.sort((a, b) => b.steps - a.steps).slice(0, 3);
+        const victim = top[Math.floor(Math.random() * top.length)];
+        const pos = pointAt(victim.shown / SUMMIT);
+        monkey = { victim, start: now, from: { x: W + 60, y: pos.y - 80 }, to: pos, stolen: false };
+        toast(`🐒 Khỉ cướp dép của ${shortName(victim.name)}! -8 bậc`, '#ff8a3d');
+      } else {
+        const victim = active[Math.floor(Math.random() * active.length)];
+        victim.stuckUntil = now + STUCK_MS;
+        sound.toot();
+        toast(`💩 ${shortName(victim.name)} đau bụng! Gõ "giấy" để cứu!`, '#c8a27a');
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // Sound (synthesized, no assets)
+    // ---------------------------------------------------------------------
+    const sound = (() => {
+      let ac = null;
+      const ensure = () => {
+        if (!ac) {
+          try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
+        }
+        if (ac.state === 'suspended') ac.resume();
+        return ac;
+      };
+      const tone = (freq, duration, type, gain, delay = 0) => {
+        const a = ensure();
+        if (!a) return;
+        const t = a.currentTime + delay;
+        const osc = a.createOscillator();
+        const g = a.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+        osc.connect(g).connect(a.destination);
+        osc.start(t);
+        osc.stop(t + duration);
+      };
+      return {
+        unlock: ensure,
+        // Temple bell: low fundamental plus inharmonic partials with long decay
+        bell() {
+          tone(174, 4, 'sine', 0.35);
+          tone(348 * 1.18, 3, 'sine', 0.12);
+          tone(174 * 2.76, 2.2, 'sine', 0.08);
+          tone(174 * 5.4, 1.2, 'sine', 0.04);
+        },
+        ding() {
+          tone(1318, 0.35, 'triangle', 0.08);
+          tone(1760, 0.45, 'triangle', 0.06, 0.08);
+        },
+        toot() {
+          tone(110, 0.25, 'sawtooth', 0.06);
+          tone(82, 0.35, 'sawtooth', 0.05, 0.18);
+        },
+      };
+    })();
+
+    // ---------------------------------------------------------------------
+    // Rendering
+    // ---------------------------------------------------------------------
+    const clouds = Array.from({ length: 5 }, (_, i) => ({
+      x: Math.random() * W, y: 150 + i * 55 + Math.random() * 30, s: 0.6 + Math.random() * 0.5,
+      v: 0.08 + Math.random() * 0.2, art: `cloud-${(i % 4) + 1}`,
+    }));
+
+    // Draws an image scaled to `height`, anchored at its bottom centre
+    function drawSprite(img, x, y, height, flip = false) {
+      const scale = height / img.naturalHeight;
+      const w = img.naturalWidth * scale;
+      ctx.save();
+      ctx.translate(x, y);
+      if (flip) ctx.scale(-1, 1);
+      ctx.drawImage(img, -w / 2, -height, w, height);
+      ctx.restore();
+      return scale;
+    }
+
+    function drawBackground() {
+      const sky = art('bg-sky');
+      if (sky) {
+        // cover-fit the portrait sky
+        const scale = Math.max(W / sky.naturalWidth, H / sky.naturalHeight);
+        const w = sky.naturalWidth * scale;
+        const h = sky.naturalHeight * scale;
+        ctx.drawImage(sky, (W - w) / 2, (H - h) / 2, w, h);
+      } else {
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#1b1f4a');
+        grad.addColorStop(0.35, '#6a3b78');
+        grad.addColorStop(0.62, '#f28b64');
+        grad.addColorStop(1, '#2b2350');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      for (const c of clouds) {
+        c.x += c.v;
+        if (c.x > W + 160) c.x = -220;
+        const img = art(c.art);
+        if (img) {
+          const w = 220 * c.s;
+          ctx.globalAlpha = 0.9;
+          ctx.drawImage(img, c.x - w / 2, c.y - (w * img.naturalHeight) / img.naturalWidth / 2, w, (w * img.naturalHeight) / img.naturalWidth);
+          ctx.globalAlpha = 1;
+        } else {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+          ctx.beginPath();
+          ctx.ellipse(c.x, c.y, 70 * c.s, 18 * c.s, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      const mountain = art('mountain');
+      if (mountain) {
+        ctx.drawImage(mountain, MOUNTAIN.x, MOUNTAIN.y, MOUNTAIN.w, MOUNTAIN.h);
+      } else {
+        const rock = ctx.createLinearGradient(0, MOUNTAIN.y, 0, H);
+        rock.addColorStop(0, '#4a6b4f');
+        rock.addColorStop(1, '#213a2a');
+        ctx.fillStyle = rock;
+        ctx.beginPath();
+        ctx.moveTo(MOUNTAIN.x, MOUNTAIN.y + MOUNTAIN.h);
+        ctx.lineTo(W / 2 - 50, MOUNTAIN.y);
+        ctx.lineTo(MOUNTAIN.x + MOUNTAIN.w, MOUNTAIN.y + MOUNTAIN.h);
+        ctx.fill();
+      }
+    }
+
+    function drawStairs() {
+      // The mountain art already has the stairway painted on it
+      if (!art('mountain')) {
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#a8957c';
+        ctx.lineWidth = 28;
+        ctx.beginPath();
+        PATH.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+        ctx.stroke();
+      }
+
+      for (const milestone of [25, 50, 75]) {
+        const p = pointAt(milestone / SUMMIT);
+        const outward = p.x < W / 2 ? -1 : 1;
+        const flag = art(`flag-${milestone}`);
+        if (flag) {
+          drawSprite(flag, p.x + outward * 26, p.y + 6, 62);
+        } else {
+          ctx.fillStyle = '#ffd000';
+          ctx.font = '800 18px Outfit, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(String(milestone), p.x + outward * 30, p.y + 6);
+        }
+      }
+    }
+
+    function drawPagoda(now) {
+      const pagoda = art('pagoda');
+      if (pagoda) {
+        drawSprite(pagoda, 330, 532, 300);
+      } else {
+        ctx.fillStyle = '#f2e2c4';
+        ctx.fillRect(250, 420, 160, 100);
+        ctx.fillStyle = '#2e4a3a';
+        ctx.fillRect(220, 395, 220, 28);
+        ctx.fillRect(250, 345, 160, 24);
+      }
+
+      // Bell frame sways while the winner rings it
+      const swing = celebrate ? Math.sin(now / 110) * 0.18 : 0;
+      const frame = art('bell-frame');
+      ctx.save();
+      ctx.translate(BELL.x, BELL.y - 70);
+      ctx.rotate(swing);
+      if (frame) {
+        const h = 140;
+        const w = (h * frame.naturalWidth) / frame.naturalHeight;
+        ctx.drawImage(frame, -w / 2, 0, w, h);
+      } else {
+        ctx.fillStyle = '#c9932e';
+        ctx.beginPath();
+        ctx.moveTo(-22, 20); ctx.lineTo(-32, 100); ctx.lineTo(32, 100); ctx.lineTo(22, 20);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      ctx.font = '800 20px Outfit, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.strokeText('🔔 ĐÍCH', BELL.x, BELL.y + 96);
+      ctx.fillStyle = '#ffd000';
+      ctx.fillText('🔔 ĐÍCH', BELL.x, BELL.y + 96);
+    }
+
+    function stuckPlayers(now) {
+      return [...players.values()].filter((p) => isStuck(p, now));
+    }
+
+    function drawWC(now) {
+      const occupied = stuckPlayers(now).length > 0;
+      const hut = art(occupied ? 'wc-occupied' : 'wc-hut') || art('wc-hut');
+      if (hut) {
+        const wobble = occupied ? Math.sin(now / 70) * 0.03 : 0;
+        ctx.save();
+        ctx.translate(WC.x, WC.y);
+        ctx.rotate(wobble);
+        drawSprite(hut, 0, 0, occupied ? 136 : 124);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#7a5230';
+        ctx.fillRect(WC.x - 40, WC.y - 100, 80, 100);
+        ctx.fillStyle = '#ffd000';
+        ctx.font = '800 18px Outfit, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('WC', WC.x, WC.y - 70);
+      }
+    }
+
+    function drawAvatar(player, x, y, r) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, r + 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = player.color;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.clip();
+      if (player.avatar && player.avatar.complete && player.avatar.naturalWidth > 0) {
+        ctx.drawImage(player.avatar, x - r, y - r, r * 2, r * 2);
+      } else {
+        ctx.fillStyle = '#1e2433';
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `800 ${Math.round(r)}px Outfit, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(Array.from(player.name)[0]?.toUpperCase() || '?', x, y + 1);
+        ctx.textBaseline = 'alphabetic';
+      }
+      ctx.restore();
+    }
+
+    function drawLabel(text, x, y, size = 13) {
+      ctx.font = `700 ${size}px Outfit, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.strokeText(text, x, y);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, x, y);
+    }
+
+    // Face-hole centre (sprite pixels) and radius of the stomach-ache sprites
+    const STUCK_FACE = {
+      'climber-stuck-1': { x: 86, y: 35, r: 21 },
+      'climber-stuck-2': { x: 59, y: 33, r: 20 },
+    };
+    const BODY_HEIGHT = 58;
+    const HEAD_R = 15;
+
+    function drawClimber(p, x, feetY, now, moving, facingLeft, isLeader) {
+      const frameIdx = moving ? Math.floor(now / 130 + p.slot) % 3 : 0;
+      const body = art(`climber-walk-${frameIdx + 1}`);
+      let headY;
+      if (body) {
+        drawSprite(body, x, feetY, BODY_HEIGHT, facingLeft);
+        headY = feetY - BODY_HEIGHT - HEAD_R + 6;
+      } else {
+        headY = feetY - 24;
+      }
+      // Big-head style: the viewer's avatar is the climber's head
+      drawAvatar(p, x + (facingLeft ? -2 : 2), headY, body ? HEAD_R : 18);
+      if (p.labelVisible) drawLabel(shortName(p.name, 10), x, feetY + 15);
+
+      if (isLeader && p.steps > 0) {
+        const crown = art('crown');
+        if (crown) drawSprite(crown, x, headY - HEAD_R + 4, 22);
+        else {
+          ctx.font = '22px sans-serif';
+          ctx.fillText('👑', x, headY - HEAD_R - 2);
+        }
+      }
+    }
+
+    function drawStuckClimber(p, index, now) {
+      const x = WC.x + 74 + (index % 3) * 46;
+      const y = WC.y + 6 + Math.floor(index / 3) * 18;
+      const name = Math.floor(now / 380 + p.slot) % 2 ? 'climber-stuck-2' : 'climber-stuck-1';
+      const sprite = art(name);
+      if (!sprite) {
+        drawAvatar(p, x, y - 20 + Math.sin(now / 90 + p.slot) * 3, 14);
+        return;
+      }
+      const height = 78;
+      const scale = height / sprite.naturalHeight;
+      const left = x - (sprite.naturalWidth * scale) / 2;
+      const top = y - height;
+      const face = STUCK_FACE[name];
+      // Avatar first so the sprite's face ring frames it
+      drawAvatar(p, left + face.x * scale, top + face.y * scale, face.r * scale + 1);
+      ctx.drawImage(sprite, left, top, sprite.naturalWidth * scale, height);
+    }
+
+    // Names of bunched-up climbers would overprint each other; the furthest climber keeps its label
+    let labelSpots = [];
+    function claimLabelSpot(x, y) {
+      if (labelSpots.some((s) => Math.abs(s.x - x) < 64 && Math.abs(s.y - y) < 16)) return false;
+      labelSpots.push({ x, y });
+      return true;
+    }
+
+    function drawPlayers(now, leaderId, dt) {
+      labelSpots = [];
+      // Time-based easing so throttled background frames still land on the true step
+      const ease = 1 - Math.exp(-dt / 220);
+      for (const p of players.values()) p.shown += (p.steps - p.shown) * ease;
+      // Furthest climbers claim label spots first, then everyone is painted back-to-front
+      const sorted = [...players.values()].sort((a, b) => b.shown - a.shown);
+      for (const p of sorted) {
+        if (isStuck(p, now)) continue;
+        const pos = pointAt(p.shown / SUMMIT);
+        p.labelVisible = claimLabelSpot(pos.x + (p.slot - 2) * 11, pos.y + 21);
+      }
+      let stuckIndex = 0;
+      for (const p of sorted.reverse()) {
+        const delta = p.steps - p.shown;
+        if (isStuck(p, now)) {
+          drawStuckClimber(p, stuckIndex++, now);
+          continue;
+        }
+        const fraction = p.shown / SUMMIT;
+        const pos = pointAt(fraction);
+        const ahead = pointAt(Math.min(1, fraction + 0.004));
+        const facingLeft = ahead.x < pos.x;
+        const x = pos.x + (p.slot - 2) * 11;
+        drawClimber(p, x, pos.y + 6, now, Math.abs(delta) > 0.15, facingLeft, p.id === leaderId);
+      }
+    }
+
+    function drawCableCars(now) {
+      cableCars = cableCars.filter((c) => now - c.start < 2200);
+      const car = art('cable-car');
+      for (const c of cableCars) {
+        const t = (now - c.start) / 2200;
+        const from = { x: -60, y: 1000 };
+        const to = pointAt(c.player.steps / SUMMIT);
+        const x = from.x + (to.x - from.x) * t;
+        const y = from.y + (to.y - from.y) * t - Math.sin(t * Math.PI) * 120;
+        ctx.strokeStyle = 'rgba(40, 40, 40, 0.6)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y - 60);
+        ctx.lineTo(to.x + 120, to.y - 140);
+        ctx.stroke();
+        if (car) {
+          drawSprite(car, x, y, 96);
+          drawAvatar(c.player, x + 2, y - 34, 13);
+        } else {
+          ctx.font = '42px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('🚡', x, y);
+        }
+      }
+    }
+
+    function drawMonkey(now) {
+      if (!monkey) return;
+      const t = (now - monkey.start) / 2600;
+      if (t >= 1) { monkey = null; return; }
+      if (t > 0.45 && !monkey.stolen) {
+        monkey.stolen = true;
+        monkey.victim.steps = Math.max(0, monkey.victim.steps - 8);
+      }
+      const phase = t < 0.45 ? t / 0.45 : 1 - (t - 0.45) / 0.55;
+      const x = monkey.from.x + (monkey.to.x - monkey.from.x) * phase;
+      const y = monkey.from.y + (monkey.to.y - monkey.from.y) * phase + Math.abs(Math.sin(t * 30)) * -8;
+      const frame = (Math.floor(now / 85) % 5) + 1;
+      const sprite = art(`${monkey.stolen ? 'monkey-sandal' : 'monkey-run'}-${frame}`);
+      if (sprite) {
+        // Sprites face right; the monkey runs in from the right, then flees back
+        drawSprite(sprite, x, y + 10, 62, !monkey.stolen);
+      } else {
+        ctx.font = '46px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(monkey.stolen ? '🐒🩴' : '🐒', x, y);
+      }
+    }
+
+    function drawEffects(now) {
+      effects = effects.filter((e) => now - e.start < (e.kind === 'paper' ? 900 : 700));
+      for (const e of effects) {
+        const age = now - e.start;
+        if (e.kind === 'burst') {
+          const t = age / 700;
+          const img = art('burst');
+          const size = 40 + t * 90;
+          ctx.globalAlpha = 1 - t;
+          if (img) ctx.drawImage(img, e.x - size / 2, e.y - size / 2, size, size);
+          else {
+            ctx.font = `${Math.round(size / 2)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('✨', e.x, e.y);
+          }
+          ctx.globalAlpha = 1;
+        } else {
+          // Toilet paper arcs from the chat area into the WC
+          const t = age / 900;
+          const tx = WC.x + 40;
+          const ty = WC.y - 70;
+          const x = e.x + (tx - e.x) * t;
+          const y = e.y + (ty - e.y) * t - Math.sin(t * Math.PI) * 180;
+          const img = art('toilet-paper');
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(t * Math.PI * 4);
+          if (img) ctx.drawImage(img, -18, -17, 36, 34);
+          else {
+            ctx.font = '30px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('🧻', 0, 10);
+          }
+          ctx.restore();
+        }
+      }
+    }
+
+    function drawHud(now, ranking) {
+      // Title
+      const logo = art('logo');
+      if (logo) {
+        ctx.drawImage(logo, 14, 12, 280, (280 * logo.naturalHeight) / logo.naturalWidth);
+      } else {
+        ctx.fillStyle = 'rgba(10, 12, 22, 0.72)';
+        roundRect(20, 20, 280, 50, 14);
+        ctx.fill();
+        ctx.fillStyle = '#ffd000';
+        ctx.font = '800 30px Outfit, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('🛕 LEO CHÙA', 36, 56);
+      }
+      const subtitle = `Vòng ${round} · ${players.size} người leo${viewerCount !== null ? ` · 👀 ${viewerCount}` : ''}`;
+      ctx.font = '700 15px Outfit, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(10, 12, 22, 0.7)';
+      roundRect(24, 100, ctx.measureText(subtitle).width + 24, 28, 10);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(subtitle, 36, 119);
+
+      if (winners.length) {
+        const text = `🔔 Vô địch gần nhất: ${shortName(winners[0].name, 14)}`;
+        ctx.fillStyle = 'rgba(10, 12, 22, 0.7)';
+        roundRect(24, 134, ctx.measureText(text).width + 24, 28, 10);
+        ctx.fill();
+        ctx.fillStyle = '#ffd000';
+        ctx.fillText(text, 36, 153);
+      }
+
+      // Leaderboard on the wooden panel
+      const top = ranking.slice(0, 5);
+      const panel = art('panel');
+      const boxX = W - 262;
+      const boxW = 246;
+      const boxH = 96 + Math.max(1, top.length) * 28;
+      const padX = panel ? 34 : 22;
+      if (panel) {
+        ctx.drawImage(panel, boxX, 14, boxW, boxH);
+      } else {
+        ctx.fillStyle = 'rgba(10, 12, 22, 0.72)';
+        roundRect(boxX, 14, boxW, boxH, 16);
+        ctx.fill();
+      }
+      const ink = panel ? '#4a2a12' : '#ffffff';
+      ctx.fillStyle = ink;
+      ctx.font = '800 17px Outfit, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('🏆 Bảng xếp hạng', boxX + padX, 62);
+      ctx.font = '700 15px Outfit, sans-serif';
+      if (!top.length) {
+        ctx.fillStyle = panel ? '#7a5a3a' : '#9ca3af';
+        ctx.fillText('Bình luận để tham gia!', boxX + padX, 92);
+      }
+      top.forEach((p, i) => {
+        const y = 92 + i * 28;
+        ctx.fillStyle = panel ? ['#b3261e', '#8a4b14', '#6b4a1f', ink, ink][i] : p.color;
+        ctx.fillText(`${i + 1}. ${shortName(p.name, 10)}`, boxX + padX, y);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = panel ? '#3b6b2a' : '#ffd000';
+        ctx.fillText(`${Math.floor(p.steps)}/${SUMMIT}`, boxX + boxW - padX, y);
+        ctx.textAlign = 'left';
+      });
+
+      // Toasts above the rules strip
+      ctx.font = '700 19px Outfit, sans-serif';
+      toasts.forEach((t, i) => {
+        const age = now - t.born;
+        const alpha = Math.max(0, 1 - age / 6000);
+        if (alpha <= 0) return;
+        const y = 1200 - i * 38;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = 'rgba(10, 12, 22, 0.8)';
+        const width = Math.min(W - 40, ctx.measureText(t.text).width + 28);
+        roundRect(20, y - 27, width, 36, 10);
+        ctx.fill();
+        ctx.fillStyle = t.color;
+        ctx.fillText(t.text, 34, y - 3);
+        ctx.globalAlpha = 1;
+      });
+
+      // Rules strip
+      ctx.fillStyle = 'rgba(10, 12, 22, 0.85)';
+      ctx.fillRect(0, H - 64, W, 64);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 17px Outfit, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('💬 Bình luận +2   ❤️ Tim +1   ➕ Follow +10   🎁 Quà = bay lên', W / 2, H - 38);
+      ctx.fillStyle = '#e8c39e';
+      ctx.font = '600 15px Outfit, sans-serif';
+      ctx.fillText('💩 Ai kẹt trong WC? Gõ "giấy" để cứu!', W / 2, H - 14);
+      ctx.textAlign = 'left';
+    }
+
+    function drawCelebration(now) {
+      for (const p of particles) {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.life -= 0.008;
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size * 0.6);
+      }
+      ctx.globalAlpha = 1;
+      for (let i = particles.length - 1; i >= 0; i--) if (particles[i].life <= 0) particles.splice(i, 1);
+
+      if (!celebrate) return;
+      if (now > celebrate.until) { nextRound(); return; }
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.textAlign = 'center';
+
+      const banner = art('win-banner');
+      const pulse = 1 + Math.sin(now / 180) * 0.03;
+      if (banner) {
+        const bw = 500 * pulse;
+        const bh = (bw * banner.naturalHeight) / banner.naturalWidth;
+        ctx.drawImage(banner, W / 2 - bw / 2, 330 - bh / 2, bw, bh);
+      } else {
+        ctx.fillStyle = '#ffd000';
+        ctx.font = '800 56px Outfit, sans-serif';
+        ctx.fillText('CHIẾN THẮNG', W / 2, 350);
+      }
+      ctx.fillStyle = '#ffd000';
+      ctx.font = '800 40px Outfit, sans-serif';
+      ctx.fillText('BOONG! 🔔', W / 2, 470);
+
+      drawAvatar(celebrate.player, W / 2, 590, 82 * pulse);
+      const crown = art('crown');
+      if (crown) drawSprite(crown, W / 2, 510, 56);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 38px Outfit, sans-serif';
+      ctx.fillText(shortName(celebrate.player.name, 18), W / 2, 730);
+      ctx.font = '600 24px Outfit, sans-serif';
+      ctx.fillText(`đã lên tới chùa! (${celebrate.player.wins} lần thắng)`, W / 2, 772);
+      ctx.fillStyle = '#c7cad1';
+      ctx.font = '600 20px Outfit, sans-serif';
+      ctx.fillText(`Vòng mới sau ${Math.ceil((celebrate.until - now) / 1000)}s`, W / 2, 820);
+      ctx.textAlign = 'left';
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    let lastFrameAt = performance.now();
+
+    function frame(now) {
+      const dt = Math.min(1000, now - lastFrameAt);
+      lastFrameAt = now;
+      // Drop viewers who went quiet so the stairway stays readable
+      for (const [id, p] of players) {
+        if (now - p.lastActive > IDLE_KICK_MS && p.steps < SUMMIT) players.delete(id);
+      }
+      if (now >= nextHazardAt) runHazard(now);
+
+      ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      ctx.fillStyle = '#0b0d14';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+      ctx.setTransform(view.scale * view.dpr, 0, 0, view.scale * view.dpr, view.offX * view.dpr, view.offY * view.dpr);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, W, H);
+      ctx.clip();
+
+      const ranking = [...players.values()].sort((a, b) => b.steps - a.steps);
+      drawBackground();
+      drawStairs();
+      drawPagoda(now);
+      drawWC(now);
+      drawPlayers(now, ranking[0]?.id, dt);
+      drawCableCars(now);
+      drawMonkey(now);
+      drawEffects(now);
+      drawHud(now, ranking);
+      drawCelebration(now);
+
+      ctx.restore();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    // ---------------------------------------------------------------------
+    // Server connection: session -> single-use ticket -> /ws (re-ticket on drop)
+    // ---------------------------------------------------------------------
+    const setupEl = document.getElementById('setup');
+    const statusEl = document.getElementById('setupStatus');
+    const startBtn = document.getElementById('startBtn');
+    const modeSelect = document.getElementById('modeSelect');
+    const userInput = document.getElementById('userInput');
+    const keyInput = document.getElementById('keyInput');
+    const connFields = document.getElementById('connFields');
+
+    const ACTIVE_STATUSES = ['queued', 'connecting', 'connected', 'reconnecting'];
+    let conn = null;   // { apiKey, sessionId, socket, stopped, retry, statusTimer }
+    let demoTimer = null;
+
+    modeSelect.value = storage.get('leochua.mode') || 'live';
+    userInput.value = storage.get('leochua.user') || '';
+    keyInput.value = storage.get('leochua.key') || '';
+    const syncFields = () => { connFields.style.display = modeSelect.value === 'demo' ? 'none' : 'block'; };
+    modeSelect.addEventListener('change', syncFields);
+    syncFields();
+
+    function setStatus(text, isError = false) {
+      statusEl.textContent = text;
+      statusEl.className = isError ? 'error' : '';
+    }
+
+    async function api(path, apiKey, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}`, ...(options.headers || {}) },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err = new Error(json.error?.message || `HTTP ${res.status}`);
+        err.status = res.status;
+        throw err;
+      }
+      return json.data;
+    }
+
+    async function openSession(username, apiKey, mode) {
+      try {
+        return await api('/api/v1/live/sessions', apiKey, {
+          method: 'POST',
+          body: JSON.stringify({ creatorUsername: username, mode, reconnect: true }),
+        });
+      } catch (err) {
+        if (err.status !== 409) throw err;
+        // Already running (e.g. overlay reloaded): attach to the live session
+        const sessions = await api('/api/v1/live/sessions?limit=50', apiKey);
+        const active = sessions.find((s) => s.creatorUsername === username && ACTIVE_STATUSES.includes(s.status));
+        if (!active) throw err;
+        return active;
+      }
+    }
+
+    async function openSocket() {
+      if (!conn || conn.stopped) return;
+      try {
+        const { ticket } = await api('/api/v1/realtime/tickets', conn.apiKey, {
+          method: 'POST',
+          body: JSON.stringify({ sessionIds: [conn.sessionId] }),
+        });
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socket = new WebSocket(`${protocol}//${location.host}/ws`);
+        conn.socket = socket;
+        socket.onopen = () => socket.send(JSON.stringify({ action: 'authenticate', ticket }));
+        socket.onmessage = (msg) => {
+          const frame = JSON.parse(msg.data);
+          if (frame.type === 'authenticated') {
+            socket.send(JSON.stringify({ action: 'subscribe', sessionId: conn.sessionId }));
+          } else if (frame.type === 'subscribed') {
+            conn.retry = 0;
+          } else if (frame.type === 'event') {
+            handleEvent(frame.event);
+          }
+        };
+        socket.onclose = () => scheduleReconnect();
+      } catch (err) {
+        scheduleReconnect();
+      }
+    }
+
+    function scheduleReconnect() {
+      if (!conn || conn.stopped) return;
+      const delay = Math.min(30000, 1000 * 2 ** conn.retry) * (0.5 + Math.random() / 2);
+      conn.retry++;
+      setTimeout(openSocket, delay);
+    }
+
+    function watchSession() {
+      clearInterval(conn.statusTimer);
+      conn.statusTimer = setInterval(async () => {
+        if (!conn || conn.stopped) return;
+        try {
+          const s = await api(`/api/v1/live/sessions/${conn.sessionId}`, conn.apiKey);
+          if (s.status === 'failed' || s.status === 'ended' || s.status === 'disconnected') {
+            stopConnection();
+            setupEl.classList.remove('hidden');
+            setStatus(`Phiên đã dừng (${s.status}): ${s.disconnectReason || 'không rõ lý do'}`, true);
+          }
+        } catch { /* transient */ }
+      }, 5000);
+    }
+
+    function stopConnection() {
+      if (conn) {
+        conn.stopped = true;
+        clearInterval(conn.statusTimer);
+        if (conn.socket) conn.socket.close();
+      }
+      conn = null;
+      clearInterval(demoTimer);
+      demoTimer = null;
+    }
+
+    // ---------------------------------------------------------------------
+    // Offline demo: simulated viewers for rehearsing without a LIVE
+    // ---------------------------------------------------------------------
+    const DEMO_NAMES = ['Mây Lang Thang', 'Bé Bắp', 'Anh Ba Xe Ôm', 'Cô Tư Bán Xôi', 'Tùng Nè', 'Linh Linh',
+      'Hải Đăng', 'Mít Ướt', 'Chú Bảy', 'Na Na', 'Quân Gamer', 'Thỏ Ngọc'];
+
+    function startDemo() {
+      const viewers = DEMO_NAMES.map((name, i) => ({ uniqueId: `demo_${i}`, nickname: name }));
+      const pick = () => viewers[Math.floor(Math.random() * viewers.length)];
+      viewers.slice(0, 6).forEach((u) => handleEvent({ type: 'member', user: u, data: {} }));
+      demoTimer = setInterval(() => {
+        const r = Math.random();
+        const stuck = [...players.values()].some((p) => isStuck(p));
+        if (stuck && r < 0.3) handleEvent({ type: 'chat', user: pick(), data: { text: 'giấy nè' } });
+        else if (r < 0.55) handleEvent({ type: 'chat', user: pick(), data: { text: 'lên lên' } });
+        else if (r < 0.85) handleEvent({ type: 'like', user: pick(), data: { likeCount: 1 + Math.floor(Math.random() * 3) } });
+        else if (r < 0.995) handleEvent({ type: 'gift', user: pick(), data: { giftName: 'Rose', diamondCount: 1, repeatCount: 1 + Math.floor(Math.random() * 5) } });
+        else handleEvent({ type: 'gift', user: pick(), data: { giftName: 'Galaxy', diamondCount: 1000, repeatCount: 1 } });
+      }, 450);
+    }
+
+    document.getElementById('setupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      sound.unlock();
+      stopConnection();
+      const mode = modeSelect.value;
+      storage.set('leochua.mode', mode);
+
+      if (mode === 'demo') {
+        startDemo();
+        setupEl.classList.add('hidden');
+        setStatus('');
+        return;
+      }
+
+      const username = userInput.value.trim().replace(/^@+/, '').toLowerCase();
+      const apiKey = keyInput.value.trim();
+      if (!username || !apiKey) {
+        setStatus('Nhập ID TikTok và API key.', true);
+        return;
+      }
+      storage.set('leochua.user', username);
+      storage.set('leochua.key', apiKey);
+
+      startBtn.disabled = true;
+      setStatus('Đang kết nối...');
+      try {
+        if (mode === 'live') {
+          const profile = await api(`/api/v1/tiktok/creators/${encodeURIComponent(username)}`, apiKey);
+          if (!profile.isLive) throw new Error(`@${username} hiện không LIVE`);
+        }
+        const session = await openSession(username, apiKey, mode);
+        conn = { apiKey, sessionId: session.id, socket: null, stopped: false, retry: 0, statusTimer: null };
+        await openSocket();
+        watchSession();
+        toast(`🛕 Đã kết nối @${username}. Bình luận để leo!`, '#ffd000');
+        setupEl.classList.add('hidden');
+        setStatus('');
+      } catch (err) {
+        setStatus(err.message, true);
+      } finally {
+        startBtn.disabled = false;
+      }
+    });
+
+    const toggleSetup = () => setupEl.classList.toggle('hidden');
+    document.getElementById('gearBtn').addEventListener('click', toggleSetup);
+    window.addEventListener('keydown', (e) => {
+      if (e.target instanceof HTMLInputElement) return;
+      const key = e.key.toLowerCase();
+      if (key === 's') toggleSetup();
+      // Rehearsal shortcuts, demo mode only
+      if (demoTimer && key === 'm') runHazard(performance.now(), 'monkey');
+      if (demoTimer && key === 'w') runHazard(performance.now(), 'wc');
+    });
+
+    // ?demo in the URL starts the rehearsal immediately (useful for previews)
+    if (new URLSearchParams(location.search).has('demo')) {
+      modeSelect.value = 'demo';
+      syncFields();
+      startDemo();
+      setupEl.classList.add('hidden');
+    }
+  })();
+  </script>
+</body>
+</html>

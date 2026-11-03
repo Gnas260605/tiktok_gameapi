@@ -224,6 +224,21 @@ export class EventIngestionService {
       });
     };
 
+    const failedHandler = (info: { reason?: string }) => {
+      this.enqueueStatusUpdate(sessionId, async () => {
+        try {
+          await this.handleSessionDisconnection(
+            tenantId,
+            sessionId,
+            'failed',
+            info?.reason || 'CONNECTOR_FAILED'
+          );
+        } catch (err: any) {
+          console.error(`Failed to update session ${sessionId} to failed: ${err.message}`);
+        }
+      });
+    };
+
     const errorHandler = (err: any) => {
       console.error(`Connector error on session ${sessionId}:`, err);
     };
@@ -238,6 +253,7 @@ export class EventIngestionService {
     connector.on('reconnecting', reconnectingHandler);
     connector.on('disconnected', disconnectedHandler);
     connector.on('ended', endedHandler);
+    connector.on('failed', failedHandler);
     connector.on('error', errorHandler);
 
     return {
@@ -249,6 +265,7 @@ export class EventIngestionService {
         connector.removeListener('reconnecting', reconnectingHandler);
         connector.removeListener('disconnected', disconnectedHandler);
         connector.removeListener('ended', endedHandler);
+        connector.removeListener('failed', failedHandler);
         connector.removeListener('error', errorHandler);
       },
     };
@@ -293,6 +310,7 @@ export class EventIngestionService {
 
     // 2. User Normalization & Upsert
     let persistedUserId: string | null = null;
+    let persistedUser: any = null;
 
     // CRITICAL: roomUser strictly enforces user: null
     if (eventType !== 'roomUser') {
@@ -313,6 +331,7 @@ export class EventIngestionService {
             });
 
             persistedUserId = upsertedUser.id;
+            persistedUser = upsertedUser;
 
             // Track user session metrics
             this.updateUserStats(sessionId, upsertedUser.id, normalizedUser.uniqueId, eventType, payload, occurredAt);
@@ -344,7 +363,7 @@ export class EventIngestionService {
       // 5. Broadcast to Real-Time Subscribers if available
       if (this.realtimeBroadcaster && typeof this.realtimeBroadcaster.broadcast === 'function') {
         try {
-          this.realtimeBroadcaster.broadcast(tenantId, sessionId, persistedEvent);
+          this.realtimeBroadcaster.broadcast(tenantId, sessionId, { ...persistedEvent, user: persistedUser });
         } catch (broadcastErr: any) {
           console.warn(`Realtime broadcast failed: ${broadcastErr.message}`);
         }

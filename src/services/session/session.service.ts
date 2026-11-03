@@ -59,7 +59,15 @@ export class SessionService {
       'tiktok',
       normalizedUsername
     );
-    if (existingActive) {
+    // Connectors live in process memory, so an "active" row with no connector here
+    // was orphaned by a restart or crash; close it instead of blocking forever.
+    // Assumes a single API instance owns all connectors (see docs/DEPLOYMENT.md).
+    if (existingActive && !this.activeConnectors.has(existingActive.id)) {
+      await this.sessionRepo.updateStatus(tenantId, existingActive.id, 'disconnected', {
+        endedAt: new Date(),
+        disconnectReason: 'ORPHANED_BY_RESTART',
+      });
+    } else if (existingActive) {
       const err = new Error(
         `Active session already exists for creator '${normalizedUsername}' in this tenant`
       );
@@ -124,9 +132,15 @@ export class SessionService {
             startedAt: new Date(),
           });
         } else {
-          await this.sessionRepo.updateStatus(tenantId, session.id, 'failed', {
-            disconnectReason: result.error ?? 'Connection failed',
-          });
+          await this.sessionRepo.updateStatus(
+            tenantId,
+            session.id,
+            result.status === 'ended' ? 'ended' : 'failed',
+            {
+              disconnectReason: result.error ?? 'Connection failed',
+              ...(result.status === 'ended' && { endedAt: new Date() }),
+            }
+          );
           this.activeConnectors.delete(session.id);
         }
       })

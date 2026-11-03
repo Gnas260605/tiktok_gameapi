@@ -19,7 +19,7 @@ export class UserNormalizationService {
     const platformUserId = this.extractPlatformUserId(rawUser);
 
     // 2. Extract and sanitize uniqueId (handle/username)
-    const uniqueId = this.sanitizeUniqueId(rawUser.uniqueId || rawUser.secUid);
+    const uniqueId = this.sanitizeUniqueId(rawUser.uniqueId || rawUser.displayId || rawUser.secUid);
 
     // 3. Extract and sanitize display nickname
     const nickname = this.sanitizeNickname(rawUser.nickname || rawUser.nickName, uniqueId);
@@ -29,7 +29,9 @@ export class UserNormalizationService {
       rawUser.avatarUrl ||
       rawUser.profilePictureUrl ||
       rawUser.avatarThumb?.url_list?.[0] ||
-      rawUser.avatarMedium?.url_list?.[0]
+      rawUser.avatarThumb?.urlList?.[0] ||
+      rawUser.avatarMedium?.url_list?.[0] ||
+      rawUser.avatarMedium?.urlList?.[0]
     );
 
     // 5. Extract verification status

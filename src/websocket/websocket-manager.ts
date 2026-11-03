@@ -261,7 +261,8 @@ export class WebSocketManager {
       event: {
         eventId: event.eventId ?? event.id,
         sessionId,
-        type: event.type,
+        // Accepts both formatted events (`type`) and persisted Prisma rows (`eventType`)
+        type: event.type ?? event.eventType,
         occurredAt: event.occurredAt instanceof Date ? event.occurredAt.toISOString() : event.occurredAt,
         receivedAt: event.receivedAt instanceof Date ? event.receivedAt.toISOString() : event.receivedAt,
         user: event.user

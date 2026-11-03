@@ -109,6 +109,35 @@ describe('Live Sessions REST API', () => {
     expect(body.error.code).toBe('CONFLICT');
   });
 
+  it('POST /api/v1/live/sessions closes an active session orphaned by a restart', async () => {
+    // A row left "connected" by a previous process has no in-memory connector here
+    const orphan = await prisma.liveSession.create({
+      data: {
+        tenantId: tenantAlphaId,
+        platform: 'tiktok',
+        creatorUsername: 'streamer_orphan',
+        status: 'connected',
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/live/sessions',
+      headers: {
+        authorization: `Bearer ${apiKeyAlpha}`,
+      },
+      payload: {
+        creatorUsername: 'streamer_orphan',
+        mode: 'mock',
+      },
+    });
+
+    expect(response.statusCode).toBe(202);
+    const closed = await prisma.liveSession.findUnique({ where: { id: orphan.id } });
+    expect(closed?.status).toBe('disconnected');
+    expect(closed?.disconnectReason).toBe('ORPHANED_BY_RESTART');
+  });
+
   it('GET /api/v1/live/sessions returns paginated session list', async () => {
     const response = await app.inject({
       method: 'GET',

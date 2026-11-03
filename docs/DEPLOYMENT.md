@@ -36,6 +36,8 @@ Key environment variables:
 | `HOST` | `0.0.0.0` | Binding interface host |
 | `NODE_ENV` | `development` | Runtime environment (`development`, `test`, `production`) |
 | `TIKTOK_CONNECTOR_MODE` | `mock` | Connector mode: `mock` for deterministic testing or `live` for TikTok LIVE |
+| `TIKTOK_SIGN_API_KEY` | _(empty)_ | Euler Stream sign-server key. Required in `live` mode to open the TikTok event stream; never sent to clients |
+| `TIKTOK_EXTENDED_GIFT_INFO` | `false` | Fetch the room gift catalogue on connect. Needs an Euler Business plan; gift name, diamonds and image are already on every gift event |
 | `WS_TICKET_TTL_SECONDS` | `60` | Single-use realtime WebSocket ticket lifetime |
 | `WS_HEARTBEAT_INTERVAL_MS` | `30000` | WebSocket idle ping/pong interval |
 
@@ -138,3 +140,26 @@ server {
 - [x] **Multi-Tenant Composite Keys**: Database constraints physically isolate tenant data (`tenant_id, id`).
 - [x] **Non-Root Container**: Container runs under the `tikuser` unprivileged user.
 - [x] **Structured Logging**: All access and error events use Pino JSON format with correlation `requestId`.
+- [x] **Live Connector Signing**: `TIKTOK_SIGN_API_KEY` stays server-side. Sign rejections fail the session immediately with a diagnostic `disconnectReason`; network drops and sign rate limits retry with jittered exponential backoff.
+
+### Live Connector Topology
+
+LIVE connectors are held in API process memory, so run **one API instance** for live mode (scale WebSocket fan-out behind it, not connector ownership). When a session row is still active but no connector exists in the current process (after a restart or crash), the next `POST /api/v1/live/sessions` for that creator closes it as `disconnected` with reason `ORPHANED_BY_RESTART` instead of returning `409`.
+
+`GET /api/v1/tiktok/creators/:username` resolves a creator's nickname, avatar and LIVE status without a sign key, for offline creators too. Results are cached for 30s and concurrent lookups share one upstream request.
+
+### Stream Overlay Game (`/game`)
+
+`GET /game` serves **Leo Chùa**, a 9:16 canvas overlay where viewers climb a mountain stairway to a pagoda bell. Add it as a Browser Source (1080×1920 or 720×1280) in OBS or TikTok LIVE Studio, use *Interact* once to enter the creator ID and tenant API key (kept in the source's localStorage, never in the URL), then press Start. Press `S` or the ⚙️ button to reopen settings. `/game?demo` runs an offline rehearsal with simulated viewers.
+
+| Viewer action | Effect |
+|---|---|
+| Comment | +2 steps (2.5s cooldown per viewer) |
+| Like | +1–3 steps |
+| Follow / Share | +10 / +15 steps |
+| Gift | `round(4 + 6·√diamonds)` steps; ≥30 steps rides the cable car; also frees the sender from the WC |
+| Comment `giấy` | Cuts 2.5s off a viewer stuck in the WC |
+
+Hazards fire every 25–40s once two climbers are past step 5: a monkey steals sandals from a top-3 climber (−8 steps) or a climber gets a stomach ache and is stuck in the WC for 10s. First to step 100 rings the bell and the round resets.
+
+Art lives in `public/game-assets/*.png` and is served from `/game-assets/:file` (flat `[a-z0-9-].png` names only). Any missing file falls back to vector drawing. Regenerate the PNGs from the asset sheet with `python scripts/slice-game-assets.py <sheet> public/game-assets <qa.png>`. In `/game?demo`, press `M` (monkey) or `W` (stomach ache) to rehearse hazards on demand.

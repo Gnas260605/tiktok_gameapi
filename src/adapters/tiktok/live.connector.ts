@@ -7,7 +7,16 @@ import {
   EventType,
 } from './types';
 import { UserNormalizationService } from '../../services/user/user-normalization.service';
+import { classifyUpstreamError } from './upstream-errors';
 
+/**
+ * Production adapter over tiktok-live-connector v2 (TikTokLiveConnection, proto v3 payloads).
+ *
+ * The upstream WebSocket URL is signed by the Euler Stream sign server, which
+ * requires TIKTOK_SIGN_API_KEY. Gift catalogue fetching (enableExtendedGiftInfo)
+ * is a Business-plan endpoint, so it is opt-in via TIKTOK_EXTENDED_GIFT_INFO=true;
+ * gift name, diamond value and image already arrive on every gift message.
+ */
 export class LiveTikTokConnector extends BaseConnector {
   private liveConnection: any = null;
   private normalizationService: UserNormalizationService;
@@ -17,9 +26,6 @@ export class LiveTikTokConnector extends BaseConnector {
     this.normalizationService = normalizationService || new UserNormalizationService();
   }
 
-  /**
-   * Connects to a real TikTok LIVE room using tiktok-live-connector with dynamic import.
-   */
   public async connect(
     creatorUsername: string,
     options?: ConnectorOptions
@@ -48,244 +54,196 @@ export class LiveTikTokConnector extends BaseConnector {
     this.creatorUsername = normalized;
     this.isExplicitlyStopped = false;
     this.reconnectAttempts = 0;
+    this.maxRetries = this.options.maxReconnectAttempts ?? 5;
 
     this.transitionTo('connecting');
 
     try {
-      // 1. Dynamic import of tiktok-live-connector with defensive fallback
-      let TikTokLiveConnectorModule: any;
-      try {
-        TikTokLiveConnectorModule = await import('tiktok-live-connector');
-      } catch (importErr: any) {
-        const errorMsg =
-          'tiktok-live-connector package is not installed or available in this environment. ' +
-          'Please ensure the dependency is installed or use MockConnector for offline development/testing.';
-        this.safeLog('error', errorMsg);
-        this.transitionTo('failed', 'CONNECTOR_LIBRARY_NOT_INSTALLED');
-        return {
-          success: false,
-          status: 'failed',
-          error: errorMsg,
-        };
-      }
+      this.liveConnection = await this.createUpstreamConnection(this.options);
+    } catch (err: any) {
+      this.safeLog('error', err.message);
+      this.transitionTo('failed', 'CONNECTOR_LIBRARY_NOT_INSTALLED');
+      return { success: false, status: 'failed', error: err.message };
+    }
 
-      const WebcastPushConnection =
-        TikTokLiveConnectorModule.WebcastPushConnection ||
-        TikTokLiveConnectorModule.default?.WebcastPushConnection ||
-        TikTokLiveConnectorModule.default;
+    this.bindUpstreamEvents();
 
-      if (!WebcastPushConnection) {
-        throw new Error('Failed to resolve WebcastPushConnection from tiktok-live-connector module');
-      }
-
-      // 2. Instantiate upstream connection
-      this.liveConnection = new WebcastPushConnection(this.creatorUsername, {
-        processInitialData: false,
-        enableExtendedGiftInfo: options?.enableExtendedGiftInfo ?? true,
-        requestPollingIntervalMs: options?.requestPollingIntervalMs ?? 1000,
-        clientParams: options?.clientParams ?? {},
-      });
-
-      // 3. Bind upstream event listeners
-      this.bindUpstreamEvents();
-
-      // 4. Connect to upstream TikTok Webcast
+    try {
       const state = await this.liveConnection.connect();
+      if (this.isExplicitlyStopped) {
+        return { success: false, status: this.status, error: 'Stopped during connect' };
+      }
 
+      const upstreamRoom = state?.roomInfo?.data ?? state?.roomInfo ?? {};
       this.roomInfo = {
         roomId: String(state?.roomId || this.liveConnection.roomId || uuidv4()),
         creatorUsername: this.creatorUsername,
-        title: state?.roomInfo?.title || null,
-        viewerCount: state?.roomInfo?.user_count || 0,
+        title: upstreamRoom.title || null,
+        viewerCount: upstreamRoom.user_count || 0,
         startedAt: new Date(),
       };
 
       this.transitionTo('connected');
-
-      return {
-        success: true,
-        roomId: this.roomInfo.roomId,
-        status: 'connected',
-      };
+      return { success: true, roomId: this.roomInfo.roomId, status: 'connected' };
     } catch (err: any) {
-      this.safeLog('error', `Live connection failed for @${this.creatorUsername}: ${err.message}`, err.stack);
+      const classified = classifyUpstreamError(err, this.creatorUsername);
+      this.safeLog('error', `Live connection failed for @${this.creatorUsername}: ${classified.message}`);
 
-      const isRoomOffline =
-        err.message?.includes('LIVE_NOT_FOUND') ||
-        err.message?.includes('offline') ||
-        err.message?.includes('Room not found') ||
-        err.message?.includes('ROOM_OFFLINE');
+      const finalStatus = classified.kind === 'offline' ? 'ended' : 'failed';
+      await this.teardownUpstream();
+      this.transitionTo(finalStatus, classified.message);
 
-      const finalStatus = isRoomOffline ? 'ended' : 'failed';
-      this.transitionTo(finalStatus, err.message);
-
-      return {
-        success: false,
-        status: finalStatus,
-        error: err.message,
-      };
+      return { success: false, status: finalStatus, error: classified.message };
     }
   }
 
-  /**
-   * Gracefully disconnects the live stream connection.
-   */
   public async disconnect(reason: string = 'STOPPED_BY_USER'): Promise<void> {
     this.isExplicitlyStopped = true;
     this.clearReconnectTimer();
-
-    if (this.liveConnection) {
-      try {
-        await this.liveConnection.disconnect();
-      } catch (err: any) {
-        this.safeLog('warn', `Error during upstream disconnect: ${err.message}`);
-      } finally {
-        this.unbindUpstreamEvents();
-        this.liveConnection = null;
-      }
-    }
-
+    await this.teardownUpstream();
     this.transitionTo('disconnected', reason);
   }
 
-  /**
-   * Binds upstream Webcast event listeners and maps them to CanonicalEvents.
-   */
-  private bindUpstreamEvents(): void {
-    if (!this.liveConnection) return;
+  private async createUpstreamConnection(options: ConnectorOptions): Promise<any> {
+    let mod: any;
+    try {
+      mod = await import('tiktok-live-connector');
+    } catch {
+      throw new Error(
+        'tiktok-live-connector package is not installed. Install it or use MockConnector (TIKTOK_CONNECTOR_MODE=mock).'
+      );
+    }
 
-    // 1. Member join
-    this.liveConnection.on('member', (raw: any) => {
-      this.handleIncomingRawEvent('member', raw, {
-        joinMethod: raw?.displayType || 'enter_room',
-        sourceFields: raw,
-      });
-    });
+    const TikTokLiveConnection = mod.TikTokLiveConnection || mod.default?.TikTokLiveConnection;
+    if (!TikTokLiveConnection) {
+      throw new Error('tiktok-live-connector v2+ is required (TikTokLiveConnection export not found)');
+    }
 
-    // 2. Chat comment
-    this.liveConnection.on('chat', (raw: any) => {
-      const commentText = raw?.comment || raw?.text || '';
-      this.handleIncomingRawEvent('chat', raw, {
-        comment: commentText,
-        text: commentText,
-        messageId: raw?.msgId || raw?.id || null,
-        emotes: raw?.emotes || [],
-      });
-    });
-
-    // 3. Gift
-    this.liveConnection.on('gift', (raw: any) => {
-      this.handleIncomingRawEvent('gift', raw, {
-        giftId: String(raw?.giftId || raw?.id || 'unknown'),
-        giftName: raw?.giftName || 'Unknown Gift',
-        diamondCount: raw?.diamondCount !== undefined ? Number(raw.diamondCount) : null,
-        repeatCount: raw?.repeatCount ? Number(raw.repeatCount) : 1,
-        repeatEnd: raw?.repeatEnd !== undefined ? Boolean(raw.repeatEnd) : true,
-        giftType: raw?.giftType ? Number(raw.giftType) : null,
-        groupId: raw?.groupId ? String(raw.groupId) : null,
-      });
-    });
-
-    // 4. Like
-    this.liveConnection.on('like', (raw: any) => {
-      this.handleIncomingRawEvent('like', raw, {
-        likeCount: Number(raw?.likeCount || 1),
-        totalLikes: raw?.totalLikeCount ? Number(raw.totalLikeCount) : null,
-      });
-    });
-
-    // 5. Social (Follow / Share)
-    this.liveConnection.on('social', (raw: any) => {
-      const displayType = String(raw?.displayType || '');
-      if (displayType.includes('share')) {
-        this.handleIncomingRawEvent('share', raw, {
-          shareType: raw?.shareType || 'social_share',
-          shareTarget: raw?.shareTarget || 'unknown',
-        });
-      } else {
-        this.handleIncomingRawEvent('follow', raw, {
-          followType: displayType || 'live_follow',
-          sourceFields: raw,
-        });
-      }
-    });
-
-    // 6. RoomUser viewer count statistics (STRICTLY user: null)
-    this.liveConnection.on('roomUser', (raw: any) => {
-      const count = Number(raw?.viewerCount || raw?.userCount || 0);
-      if (this.roomInfo) {
-        this.roomInfo.viewerCount = count;
-      }
-      this.handleIncomingRawEvent('roomUser', raw, { viewerCount: count });
-    });
-
-    // 7. Stream end
-    this.liveConnection.on('streamEnd', () => {
-      this.safeLog('info', `Stream ended by creator @${this.creatorUsername}`);
-      this.transitionTo('ended', 'LIVE_ENDED_BY_CREATOR');
-    });
-
-    // 8. Connection drop / disconnect
-    this.liveConnection.on('disconnected', () => {
-      if (!this.isExplicitlyStopped && (this.status === 'connected' || this.status === 'connecting')) {
-        this.safeLog('warn', `Connection lost to @${this.creatorUsername}. Initiating backoff retry.`);
-        this.handleReconnection();
-      }
-    });
-
-    // 9. Upstream error
-    this.liveConnection.on('error', (err: any) => {
-      this.safeLog('error', `Upstream connector error: ${err.message}`, err);
-      this.safeEmit('error', {
-        code: 'UPSTREAM_CONNECTOR_ERROR',
-        message: err.message || 'Unknown upstream error',
-        details: err,
-      });
+    return new TikTokLiveConnection(this.creatorUsername, {
+      processInitialData: false,
+      enableExtendedGiftInfo:
+        options.enableExtendedGiftInfo ?? process.env.TIKTOK_EXTENDED_GIFT_INFO === 'true',
+      signApiKey: process.env.TIKTOK_SIGN_API_KEY || undefined,
     });
   }
 
-  /**
-   * Unbinds upstream event listeners to prevent memory leaks.
-   */
-  private unbindUpstreamEvents(): void {
-    if (!this.liveConnection) return;
+  private async teardownUpstream(): Promise<void> {
+    const connection = this.liveConnection;
+    if (!connection) return;
+    this.liveConnection = null;
     try {
-      this.liveConnection.removeAllListeners();
+      connection.removeAllListeners();
+      await connection.disconnect();
     } catch (err: any) {
-      this.safeLog('warn', `Error removing upstream listeners: ${err.message}`);
+      this.safeLog('warn', `Error during upstream disconnect: ${err.message}`);
     }
   }
 
-  /**
-   * Transforms raw upstream payload into CanonicalEvent and emits it.
-   */
-  private handleIncomingRawEvent(eventType: EventType, raw: any, payload: any): void {
-    if (!this.options) return;
+  private bindUpstreamEvents(): void {
+    const connection = this.liveConnection;
+    if (!connection) return;
 
-    // Normalize user using UserNormalizationService
+    connection.on('member', (raw: any) => {
+      this.handleIncomingRawEvent('member', raw, {
+        joinMethod: raw?.actionDescription || 'enter_room',
+        memberCount: raw?.memberCount !== undefined ? Number(raw.memberCount) : null,
+      });
+    });
+
+    connection.on('chat', (raw: any) => {
+      // proto v3 carries the text in `content`; v1 used `comment`
+      const text = String(raw?.content ?? raw?.comment ?? '');
+      if (!text) return;
+      this.handleIncomingRawEvent('chat', raw, {
+        comment: text,
+        text,
+        messageId: raw?.common?.msgId ? String(raw.common.msgId) : null,
+        language: raw?.contentLanguage || null,
+      });
+    });
+
+    connection.on('gift', (raw: any) => {
+      const payload = mapGiftPayload(raw);
+      if (payload) this.handleIncomingRawEvent('gift', raw, payload);
+    });
+
+    // proto v3 like: `count` taps in this batch, `total` room-wide likes (string)
+    connection.on('like', (raw: any) => {
+      const total = raw?.total ?? raw?.totalLikeCount;
+      this.handleIncomingRawEvent('like', raw, {
+        likeCount: Number(raw?.count ?? raw?.likeCount ?? 1) || 1,
+        totalLikes: total !== undefined && total !== '' ? Number(total) : null,
+      });
+    });
+
+    connection.on('follow', (raw: any) => {
+      this.handleIncomingRawEvent('follow', raw, { followType: 'live_follow' });
+    });
+
+    connection.on('share', (raw: any) => {
+      this.handleIncomingRawEvent('share', raw, {
+        shareType: raw?.shareType || 'social_share',
+        shareTarget: raw?.shareTarget || 'unknown',
+      });
+    });
+
+    // Viewer statistics: `total` is current viewers, `totalUser` is cumulative (user: null)
+    connection.on('roomUser', (raw: any) => {
+      const viewerCount = Number(raw?.total ?? raw?.viewerCount ?? 0);
+      if (this.roomInfo) this.roomInfo.viewerCount = viewerCount;
+      this.handleIncomingRawEvent('roomUser', raw, {
+        viewerCount,
+        totalViewers: raw?.totalUser !== undefined ? Number(raw.totalUser) : null,
+      });
+    });
+
+    connection.on('streamEnd', () => {
+      this.safeLog('info', `Stream ended by creator @${this.creatorUsername}`);
+      this.transitionTo('ended', 'LIVE_ENDED_BY_CREATOR');
+      void this.teardownUpstream();
+    });
+
+    connection.on('disconnected', (info: any) => {
+      if (this.isExplicitlyStopped || this.status !== 'connected') return;
+      this.safeLog(
+        'warn',
+        `Upstream socket closed for @${this.creatorUsername} (code ${info?.code ?? 'n/a'}). Reconnecting.`
+      );
+      void this.handleReconnection();
+    });
+
+    // Upstream 'error' covers per-message decode failures; it is not fatal
+    connection.on('error', (err: any) => {
+      const message = err?.exception?.message || err?.info || err?.message || 'Unknown upstream error';
+      this.safeLog('warn', `Upstream connector error: ${message}`);
+      this.safeEmit('error', { code: 'UPSTREAM_CONNECTOR_ERROR', message });
+    });
+  }
+
+  private handleIncomingRawEvent(eventType: EventType, raw: any, payload: any): void {
+    // Messages can arrive before connect() resolves; only drop them once terminal
+    if (!this.options || ['disconnected', 'ended', 'failed'].includes(this.status)) return;
+
     // STRICT RULE: roomUser always has user: null
     const normalizedUser =
       eventType === 'roomUser'
         ? null
         : this.normalizationService.normalizeUserFromEvent(raw, eventType);
 
-    const upstreamId = raw?.msgId
-      ? String(raw.msgId)
-      : raw?.id || raw?.eventId
-      ? String(raw.id || raw.eventId)
-      : undefined;
+    const msgId = raw?.common?.msgId;
+    const createTime = Number(raw?.common?.createTime);
 
     const canonicalEvent: CanonicalEvent = {
-      ...(upstreamId ? { id: upstreamId } : {}),
+      ...(msgId ? { id: String(msgId) } : {}),
       tenantId: this.options.tenantId,
       sessionId: this.options.sessionId,
       eventType,
-      eventTimestamp: raw?.timestamp ? new Date(Number(raw.timestamp)) : new Date(),
+      eventTimestamp: createTime > 0 ? new Date(createTime) : new Date(),
       user: normalizedUser,
       payload,
       source: {
         connector: 'tiktok-live-connector',
-        connectorVersion: '1.0.0',
+        connectorVersion: '2.x',
       },
     };
 
@@ -293,48 +251,77 @@ export class LiveTikTokConnector extends BaseConnector {
   }
 
   /**
-   * Executes bounded exponential backoff reconnection loop.
+   * Bounded exponential backoff. Re-runs connect() on the same upstream instance
+   * (v2 has no reconnect()). Non-retryable failures end the loop immediately.
    */
   private async handleReconnection(): Promise<void> {
     if (this.isExplicitlyStopped) return;
-
-    this.transitionTo('reconnecting', 'NETWORK_DISCONNECT');
+    if (this.status !== 'reconnecting' && !this.transitionTo('reconnecting', 'NETWORK_DISCONNECT')) return;
 
     if (this.reconnectAttempts >= this.maxRetries) {
-      this.safeLog('error', `Max reconnection attempts (${this.maxRetries}) exhausted. Marking session as failed.`);
+      this.safeLog('error', `Max reconnection attempts (${this.maxRetries}) exhausted.`);
       this.transitionTo('failed', 'MAX_RETRIES_EXCEEDED');
+      await this.teardownUpstream();
       return;
     }
 
     const delayMs = this.calculateBackoffDelay(this.reconnectAttempts);
     this.reconnectAttempts++;
-
-    this.safeLog(
-      'info',
-      `Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxRetries} in ${delayMs}ms`
-    );
-
+    this.safeLog('info', `Reconnect attempt ${this.reconnectAttempts}/${this.maxRetries} in ${delayMs}ms`);
     this.safeEmit('reconnecting', { attempt: this.reconnectAttempts, delayMs });
 
     this.clearReconnectTimer();
     this.reconnectTimer = setTimeout(async () => {
-      if (this.isExplicitlyStopped || this.status !== 'reconnecting') return;
+      if (this.isExplicitlyStopped || this.status !== 'reconnecting' || !this.liveConnection) return;
 
       try {
-        if (!this.liveConnection) {
-          throw new Error('Live connection instance was torn down');
-        }
-
-        this.safeLog('info', `Executing reconnect attempt ${this.reconnectAttempts}...`);
-        await this.liveConnection.reconnect();
-
-        this.safeLog('info', `Reconnection attempt ${this.reconnectAttempts} succeeded!`);
+        await this.liveConnection.connect();
         this.reconnectAttempts = 0;
         this.transitionTo('connected', 'RECONNECTED_SUCCESSFULLY');
       } catch (err: any) {
-        this.safeLog('warn', `Reconnect attempt ${this.reconnectAttempts} failed: ${err.message}`);
-        this.handleReconnection();
+        const classified = classifyUpstreamError(err, this.creatorUsername);
+        this.safeLog('warn', `Reconnect attempt ${this.reconnectAttempts} failed: ${classified.message}`);
+
+        if (!classified.retryable) {
+          const terminal = classified.kind === 'offline' ? 'ended' : 'failed';
+          this.transitionTo(terminal, classified.message);
+          await this.teardownUpstream();
+          return;
+        }
+        void this.handleReconnection();
       }
     }, delayMs);
   }
+}
+
+/**
+ * Maps a proto v3 WebcastGiftMessage to the canonical gift payload.
+ * Combo-able gifts fire on every tap with repeatEnd=0, then once more with
+ * repeatEnd=1 and the settled repeatCount; only that final message is kept so
+ * each gift is persisted exactly once.
+ */
+export function mapGiftPayload(raw: any): Record<string, any> | null {
+  const gift = raw?.gift ?? {};
+  const extended = raw?.extendedGiftInfo ?? {};
+  const giftType = gift.type ?? extended.type;
+  const isComboGift = Number(giftType) === 1 || gift.combo === true;
+
+  if (isComboGift && !Number(raw?.repeatEnd)) return null;
+
+  const diamondCount = gift.diamondCount ?? extended.diamond_count;
+  const repeatCount = Math.max(1, Number(raw?.repeatCount) || 1);
+  const unitDiamonds = diamondCount !== undefined ? Number(diamondCount) : null;
+
+  return {
+    giftId: String(raw?.giftId || gift.id || 'unknown'),
+    giftName: gift.name || extended.name || 'Unknown Gift',
+    diamondCount: unitDiamonds,
+    repeatCount,
+    totalDiamonds: unitDiamonds !== null ? unitDiamonds * repeatCount : null,
+    repeatEnd: true,
+    giftType: giftType !== undefined ? Number(giftType) : null,
+    groupId: raw?.groupId ? String(raw.groupId) : null,
+    giftImageUrl: gift.image?.urlList?.[0] || extended.image?.url_list?.[0] || null,
+    toUserId: raw?.toUser?.id ? String(raw.toUser.id) : null,
+  };
 }

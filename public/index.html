@@ -766,6 +766,55 @@
     .empty-state p {
       font-size: 0.95rem;
     }
+    /* Creator lookup preview (live mode) */
+    .lookup-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.6rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 10px;
+      background: rgba(11, 14, 22, 0.7);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.85rem;
+    }
+
+    .lookup-card img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #1e2433;
+    }
+
+    .lookup-card .lookup-name {
+      font-weight: 700;
+    }
+
+    .lookup-card .lookup-meta {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .lookup-card.is-live {
+      border-color: rgba(0, 242, 169, 0.35);
+    }
+
+    .lookup-card.is-error {
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .gift-image {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+    }
+
+    .event-item.system {
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
   </style>
 </head>
 <body>
@@ -783,6 +832,7 @@
         <div id="connectionBeacon" class="beacon"></div>
         <span id="connectionStatusText">Sẵn sàng kết nối</span>
       </div>
+      <a href="/game" target="_blank" style="color: var(--gold); text-decoration: none; font-weight: 600;">🛕 Game Leo Chùa ↗</a>
       <a href="/docs" target="_blank" style="color: var(--text-muted); text-decoration: none; font-weight: 600;">Swagger Docs ↗</a>
     </div>
   </header>
@@ -820,6 +870,7 @@
             spellcheck="false"
           >
         </div>
+        <div id="lookupCard" class="lookup-card" style="display: none;"></div>
       </div>
 
       <!-- API Key Input -->
@@ -918,6 +969,7 @@
     // App State
     let currentMode = 'mock';
     let currentSessionId = null;
+    let currentCreator = null;
     let currentWebSocket = null;
     let isConnected = false;
     let audioEnabled = true;
@@ -961,19 +1013,103 @@
     }
 
     function setMode(mode) {
+      if (isConnected) return;
       currentMode = mode;
       const mockBtn = document.getElementById('modeMockBtn');
       const liveBtn = document.getElementById('modeLiveBtn');
+      const usernameInput = document.getElementById('usernameInput');
       if (mode === 'mock') {
         mockBtn.className = 'mode-btn active mock';
         liveBtn.className = 'mode-btn live';
-        document.getElementById('usernameInput').value = 'alice_wanderer';
+        usernameInput.value = 'alice_wanderer';
+        usernameInput.placeholder = 'alice_wanderer';
+        hideLookup();
       } else {
         liveBtn.className = 'mode-btn active live';
         mockBtn.className = 'mode-btn mock';
-        document.getElementById('usernameInput').placeholder = 'nhập tên tiktok thật...';
+        usernameInput.value = '';
+        usernameInput.placeholder = 'nhập ID TikTok đang LIVE...';
+        usernameInput.focus();
       }
     }
+
+    // ---- Creator lookup (live mode): ID -> name, avatar, LIVE status ----
+    let lookupTimer = null;
+    let lookupSeq = 0;
+    let lastLookup = null;
+
+    function hideLookup() {
+      lastLookup = null;
+      const card = document.getElementById('lookupCard');
+      card.style.display = 'none';
+      card.innerHTML = '';
+    }
+
+    function showLookup(className, html) {
+      const card = document.getElementById('lookupCard');
+      card.className = 'lookup-card ' + className;
+      card.innerHTML = html;
+      card.style.display = 'flex';
+    }
+
+    // Resolves the profile or throws the server's error. `seq` only decides whether
+    // this call still owns the preview card; the caller always gets the result.
+    async function lookupCreator(username) {
+      const apiKey = document.getElementById('apiKeyInput').value.trim();
+      const seq = ++lookupSeq;
+      showLookup('', '<span>🔎 Đang tìm @' + escapeHtml(username) + '...</span>');
+
+      try {
+        const res = await fetch(`/api/v1/tiktok/creators/${encodeURIComponent(username)}`, {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error?.message || 'Không tìm thấy tài khoản');
+
+        const p = json.data;
+        if (seq !== lookupSeq) return p;
+        lastLookup = p;
+        if (p.isLive) {
+          showLookup('is-live', `
+            <img src="${escapeHtml(p.avatarUrl || '')}" alt="">
+            <div>
+              <div class="lookup-name">${escapeHtml(p.nickname || p.uniqueId)}</div>
+              <div class="lookup-meta">@${escapeHtml(p.uniqueId)} · 🟢 Đang LIVE · 👀 ${p.viewerCount ?? 0} người xem</div>
+              ${p.title ? `<div class="lookup-meta">${escapeHtml(p.title)}</div>` : ''}
+            </div>
+          `);
+        } else {
+          showLookup('is-error', p.nickname
+            ? `
+              <img src="${escapeHtml(p.avatarUrl || '')}" alt="">
+              <div>
+                <div class="lookup-name">${escapeHtml(p.nickname)}</div>
+                <div class="lookup-meta">@${escapeHtml(p.uniqueId)} · ⚫ Hiện không LIVE</div>
+              </div>
+            `
+            : `<span>⚫ @${escapeHtml(p.uniqueId)} hiện không LIVE</span>`);
+        }
+        return p;
+      } catch (err) {
+        if (seq === lookupSeq) {
+          lastLookup = null;
+          showLookup('is-error', `<span>⚠️ ${escapeHtml(err.message)}</span>`);
+        }
+        throw err;
+      }
+    }
+
+    document.getElementById('usernameInput').addEventListener('input', (e) => {
+      if (currentMode !== 'live') return;
+      clearTimeout(lookupTimer);
+      const username = e.target.value.trim().replace(/^@+/, '').toLowerCase();
+      if (username.length < 2) {
+        hideLookup();
+        return;
+      }
+      // Errors are already rendered on the preview card
+      lookupTimer = setTimeout(() => lookupCreator(username).catch(() => {}), 600);
+    });
 
     function updateBeacon(status, text) {
       const beacon = document.getElementById('connectionBeacon');
@@ -1012,6 +1148,23 @@
       updateBeacon('connecting', 'Đang thiết lập phiên LIVE...');
 
       try {
+        // 0. Live mode: resolve the creator first so we fail fast when offline
+        let creator = null;
+        if (currentMode === 'live') {
+          clearTimeout(lookupTimer);
+          const wanted = rawUsername.toLowerCase();
+          try {
+            creator = (lastLookup && lastLookup.uniqueId === wanted)
+              ? lastLookup
+              : await lookupCreator(wanted);
+          } catch (lookupErr) {
+            throw new Error('Không tra cứu được @' + rawUsername + ': ' + lookupErr.message);
+          }
+          if (!creator.isLive) {
+            throw new Error('@' + rawUsername + ' hiện không LIVE');
+          }
+        }
+
         // 1. Create Session
         const sessionRes = await fetch('/api/v1/live/sessions', {
           method: 'POST',
@@ -1028,16 +1181,28 @@
         });
 
         const sessionJson = await sessionRes.json();
-        if (!sessionRes.ok) {
+        let session = sessionJson.data;
+
+        // 409: this creator already has a running session (e.g. the page was
+        // reloaded while connected). Re-attach to it instead of failing.
+        if (sessionRes.status === 409) {
+          session = await findActiveSession(rawUsername.toLowerCase(), apiKey);
+          if (!session) {
+            throw new Error(sessionJson.error?.message || 'Phiên LIVE đang bận');
+          }
+        } else if (!sessionRes.ok) {
           throw new Error(sessionJson.error?.message || 'Không thể tạo phiên LIVE');
         }
 
-        const session = sessionJson.data;
         currentSessionId = session.id;
+        currentCreator = session.creatorUsername;
 
         // Update UI
-        document.getElementById('streamerName').innerText = session.creatorUsername;
+        document.getElementById('streamerName').innerText = creator?.nickname || session.creatorUsername;
         document.getElementById('streamerHandle').innerText = '@' + session.creatorUsername;
+        if (creator?.avatarUrl) {
+          document.getElementById('streamerAvatar').src = creator.avatarUrl;
+        }
         document.getElementById('roomCard').style.display = 'block';
         document.getElementById('mockTools').style.display = currentMode === 'mock' ? 'block' : 'none';
 
@@ -1092,9 +1257,11 @@
         connectBtn.innerHTML = '<span>⏹ Ngắt kết nối</span>';
         usernameInput.disabled = true;
 
+        watchSessionStatus(currentSessionId, apiKey);
+
       } catch (err) {
-        alert('Lỗi: ' + err.message);
-        updateBeacon('error', 'Lỗi kết nối: ' + err.message);
+        showSystemMessage('❌ ' + err.message);
+        updateBeacon('error', 'Lỗi kết nối (xem chi tiết ở feed)');
         connectBtn.disabled = false;
         connectBtn.className = 'btn btn-connect';
         connectBtn.innerHTML = '<span>🚀 Bắt đầu kết nối</span>';
@@ -1102,7 +1269,77 @@
       }
     }
 
+    const ACTIVE_STATUSES = ['queued', 'connecting', 'connected', 'reconnecting'];
+
+    async function findActiveSession(creatorUsername, apiKey) {
+      const res = await fetch('/api/v1/live/sessions?limit=50', {
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return (json.data || []).find(
+        (s) => s.creatorUsername === creatorUsername && ACTIVE_STATUSES.includes(s.status)
+      ) || null;
+    }
+
+    // The connector connects asynchronously after the 202; poll until it settles
+    // so upstream failures (offline room, sign server rejection) reach the user.
+    let statusTimer = null;
+    let sessionLive = false;
+
+    function watchSessionStatus(sessionId, apiKey) {
+      clearInterval(statusTimer);
+      sessionLive = false;
+      let attempts = 0;
+      statusTimer = setInterval(async () => {
+        attempts++;
+        if (!isConnected || currentSessionId !== sessionId || attempts > 30) {
+          clearInterval(statusTimer);
+          return;
+        }
+        try {
+          const res = await fetch(`/api/v1/live/sessions/${sessionId}`, {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+          });
+          const json = await res.json();
+          const s = json.data;
+          if (!s) return;
+          if (s.status === 'connected') {
+            clearInterval(statusTimer);
+            sessionLive = true;
+            updateBeacon('connected', `Đang LIVE: @${s.creatorUsername}`);
+          } else if (s.status === 'failed' || s.status === 'ended') {
+            clearInterval(statusTimer);
+            const reason = s.disconnectReason || 'Kết nối thất bại';
+            showSystemMessage('❌ Không nhận được sự kiện: ' + reason);
+            // Session already terminal server-side: just drop the socket, keep its reason
+            if (currentWebSocket) {
+              currentWebSocket.onclose = null;
+              currentWebSocket.close();
+            }
+            currentSessionId = null;
+            handleSocketClosed();
+            updateBeacon('error', s.status === 'ended' ? 'Phòng LIVE đã kết thúc' : 'Lỗi kết nối (xem chi tiết ở feed)');
+          }
+        } catch (e) {
+          // transient network error, keep polling
+        }
+      }, 1500);
+    }
+
+    function showSystemMessage(text) {
+      const container = document.getElementById('eventsContainer');
+      const empty = document.getElementById('emptyState');
+      if (empty) empty.style.display = 'none';
+      const item = document.createElement('div');
+      item.className = 'event-item system';
+      item.innerHTML = `<div class="event-content"><div class="event-body">${escapeHtml(text)}</div></div>`;
+      container.appendChild(item);
+      container.scrollTop = container.scrollHeight;
+    }
+
     async function disconnect() {
+      clearInterval(statusTimer);
       const apiKey = document.getElementById('apiKeyInput').value.trim();
       const connectBtn = document.getElementById('connectBtn');
       connectBtn.disabled = true;
@@ -1147,7 +1384,9 @@
           sessionId: currentSessionId,
         }));
       } else if (msg.type === 'subscribed') {
-        updateBeacon('connected', `Đang LIVE: @${document.getElementById('usernameInput').value.trim()}`);
+        if (!sessionLive) {
+          updateBeacon('connecting', 'Đang kết nối tới phòng LIVE...');
+        }
         const empty = document.getElementById('emptyState');
         if (empty) empty.style.display = 'none';
       } else if (msg.type === 'event') {
@@ -1156,6 +1395,16 @@
     }
 
     function renderEvent(event) {
+      // Viewer statistics are not a viewer action: update the room card only
+      if (event.type === 'roomUser') {
+        const viewers = event.data?.viewerCount;
+        if (viewers !== undefined && viewers !== null) {
+          document.getElementById('streamerHandle').innerText =
+            '@' + (currentCreator || '') + ' · 👀 ' + viewers;
+        }
+        return;
+      }
+
       stats.total++;
       document.getElementById('totalEventsStat').innerText = stats.total;
       document.getElementById('countAll').innerText = stats.total;
@@ -1199,7 +1448,8 @@
         eventBody = `<div class="event-body">${escapeHtml(event.data?.text || event.data?.comment || '')}</div>`;
       } else if (event.type === 'gift') {
         stats.gift++;
-        const diamonds = (event.data?.diamondCount || 1) * (event.data?.repeatCount || 1);
+        const diamonds = event.data?.totalDiamonds
+          ?? (event.data?.diamondCount || 1) * (event.data?.repeatCount || 1);
         stats.diamonds += diamonds;
         document.getElementById('totalDiamondsStat').innerText = stats.diamonds;
         document.getElementById('countGift').innerText = stats.gift;
@@ -1207,7 +1457,9 @@
 
         eventBody = `
           <div class="gift-banner">
-            <span class="gift-icon">🎁</span>
+            ${event.data?.giftImageUrl
+              ? `<img class="gift-image" src="${escapeHtml(event.data.giftImageUrl)}" alt="">`
+              : '<span class="gift-icon">🎁</span>'}
             <div>
               <div class="gift-title">Đã tặng ${escapeHtml(event.data?.giftName || 'Gift')}</div>
               <div class="gift-diamonds">💎 +${diamonds} kim cương</div>
@@ -1236,6 +1488,10 @@
             🚪 Đã tham gia phòng LIVE
           </div>
         `;
+      } else if (event.type === 'follow') {
+        eventBody = '<div class="member-badge">➕ Đã follow streamer</div>';
+      } else if (event.type === 'share') {
+        eventBody = '<div class="member-badge">🔗 Đã chia sẻ phòng LIVE</div>';
       }
 
       item.innerHTML = `

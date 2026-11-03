@@ -118,7 +118,14 @@ export class UserRepository extends BaseRepository {
           },
         });
       } catch (err: any) {
-        if (err.code === 'P2002') {
+        const isConflict =
+          err.code === 'P2002' ||
+          err.code === 'P2034' ||
+          err.message?.includes('deadlock') ||
+          err.message?.includes('40P01');
+
+        if (isConflict) {
+          await new Promise((r) => setTimeout(r, 15 + Math.random() * 20));
           let concurrent = await this.prisma.user.findFirst({
             where: {
               tenantId,
@@ -196,7 +203,14 @@ export class UserRepository extends BaseRepository {
           },
         });
       } catch (err: any) {
-        if (err.code === 'P2002') {
+        const isConflict =
+          err.code === 'P2002' ||
+          err.code === 'P2034' ||
+          err.message?.includes('deadlock') ||
+          err.message?.includes('40P01');
+
+        if (isConflict) {
+          await new Promise((r) => setTimeout(r, 15 + Math.random() * 20));
           const concurrent = await this.prisma.user.findFirst({
             where: {
               tenantId,

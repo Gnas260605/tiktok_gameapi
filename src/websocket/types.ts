@@ -70,11 +70,23 @@ export interface ErrorResponse {
   };
 }
 
+export interface GameBroadcastMessage<T extends string = string, P = any> {
+  type: 'game';
+  event: T;
+  seq: string;
+  sessionId: string;
+  at: string;
+  data: P;
+}
+
+export type GameFrame<T extends string = string, P = any> = GameBroadcastMessage<T, P>;
+
 export type ServerMessage =
   | AuthenticatedResponse
   | SubscribedResponse
   | UnsubscribedResponse
   | EventBroadcastMessage
+  | GameBroadcastMessage
   | PongResponse
   | ErrorResponse;
 

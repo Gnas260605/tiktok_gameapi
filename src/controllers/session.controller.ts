@@ -122,4 +122,50 @@ export function registerSessionRoutes(
       });
     }
   );
+
+  // POST /api/v1/live/sessions/:sessionId/chat -> 200 OK
+  fastify.post(
+    '/api/v1/live/sessions/:sessionId/chat',
+    { preHandler: [authPreHandler] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const tenant = request.tenant!;
+      const params = request.params as { sessionId: string };
+      const body = (request.body || {}) as { message?: string };
+
+      if (!body.message || typeof body.message !== 'string' || body.message.trim().length === 0) {
+        reply.status(400).send({
+          success: false,
+          error: {
+            code: 'BAD_REQUEST',
+            message: 'message is required and must not be empty',
+            requestId: request.id,
+          },
+        });
+        return;
+      }
+
+      const sendResult = await sessionService.sendChatMessage(
+        tenant.id,
+        params.sessionId,
+        body.message
+      );
+
+      if (!sendResult.success) {
+        reply.status(502).send({
+          success: false,
+          error: {
+            code: 'UPSTREAM_ERROR',
+            message: sendResult.error || 'Failed to send message to live stream',
+            requestId: request.id,
+          },
+        });
+        return;
+      }
+
+      reply.status(200).send({
+        success: true,
+        data: sendResult.result || { message: 'Message sent successfully' },
+      });
+    }
+  );
 }

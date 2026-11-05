@@ -38,6 +38,7 @@ services:
       NODE_ENV: "production"
       LOG_LEVEL: "info"
       TIKTOK_CONNECTOR_MODE: "mock"
+      VOICE_STUDIO_URL: "http://voicestudio:3900"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health/live"]
       interval: 30s
@@ -45,6 +46,19 @@ services:
       retries: 3
       start_period: 15s
 
+  voicestudio:
+    image: ghcr.io/debpalash/voicestudio:stable
+    container_name: tikuser-voicestudio
+    restart: unless-stopped
+    ports:
+      - "3900:3900"
+    environment:
+      OMNIVOICE_DATA_DIR: "/app/omnivoice_data"
+    volumes:
+      - voicedata:/app/omnivoice_data
+
 volumes:
   pgdata:
+    driver: local
+  voicedata:
     driver: local

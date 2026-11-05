@@ -11,26 +11,43 @@ import {
   EventRepository,
   ApiKeyRepository,
   TenantSettingsRepository,
+  PlayerRepository,
+  BreakthroughRepository,
+  GameEventRepository,
+  GameConfigRepository,
 } from './repositories';
-import { UserNormalizationService } from './services/user/user-normalization.service';
-import { EventIngestionService } from './services/event/event-ingestion.service';
-import { RealtimeTicketService } from './services/realtime/ticket.service';
-import { WebSocketManager } from './websocket/websocket-manager';
-import { AuthService } from './services/auth/auth.service';
-import { SessionService } from './services/session/session.service';
-import { CreatorLookupService } from './services/tiktok/creator-lookup.service';
 
-import { createAuthPreHandler } from './middleware/auth.middleware';
-import { errorHandler } from './middleware/error-handler';
+import {
+  UserNormalizationService,
+  EventIngestionService,
+  RealtimeTicketService,
+  AuthService,
+  SessionService,
+  CreatorLookupService,
+  VoiceStudioService,
+  PlayerService,
+  BreakthroughService,
+  BreakthroughScheduler,
+  LeaderboardService,
+  GameConfigService,
+} from './services';
 
-import { registerHealthRoutes } from './controllers/health.controller';
-import { registerSessionRoutes } from './controllers/session.controller';
-import { registerUserRoutes } from './controllers/user.controller';
-import { registerEventRoutes } from './controllers/event.controller';
-import { registerRealtimeRoutes } from './controllers/realtime.controller';
-import { registerApiKeyRoutes } from './controllers/api-key.controller';
-import { registerDashboardRoutes } from './controllers/dashboard.controller';
-import { registerCreatorRoutes } from './controllers/creator.controller';
+import { WebSocketManager } from './websocket';
+import { createAuthPreHandler, errorHandler } from './middleware';
+
+import {
+  registerDashboardRoutes,
+  registerHealthRoutes,
+  registerSessionRoutes,
+  registerUserRoutes,
+  registerEventRoutes,
+  registerRealtimeRoutes,
+  registerApiKeyRoutes,
+  registerCreatorRoutes,
+  registerVoiceRoutes,
+  registerGameRoutes,
+  registerGameAdminRoutes,
+} from './controllers';
 
 export interface AppDependencies {
   prisma?: PrismaClient;
@@ -45,6 +62,16 @@ export interface AppDependencies {
   sessionService?: SessionService;
   eventIngestionService?: EventIngestionService;
   creatorLookupService?: CreatorLookupService;
+  voiceStudioService?: VoiceStudioService;
+  playerRepo?: PlayerRepository;
+  playerService?: PlayerService;
+  breakthroughRepo?: BreakthroughRepository;
+  breakthroughService?: BreakthroughService;
+  breakthroughScheduler?: BreakthroughScheduler;
+  leaderboardService?: LeaderboardService;
+  gameConfigRepo?: GameConfigRepository;
+  gameConfigService?: GameConfigService;
+  gameEventRepo?: GameEventRepository;
 }
 
 export function buildApp(
@@ -86,6 +113,35 @@ export function buildApp(
     new SessionService(sessionRepo, tenantSettingsRepo, eventIngestionService);
 
   const creatorLookupService = dependencies.creatorLookupService ?? new CreatorLookupService();
+  const voiceStudioService = dependencies.voiceStudioService ?? new VoiceStudioService();
+
+  // Game Dependencies
+  const gameConfigRepo = dependencies.gameConfigRepo ?? new GameConfigRepository(prisma);
+  const gameConfigService = dependencies.gameConfigService ?? new GameConfigService(gameConfigRepo);
+  const playerRepo = dependencies.playerRepo ?? new PlayerRepository(prisma);
+  const gameEventRepo = dependencies.gameEventRepo ?? new GameEventRepository(prisma);
+  const playerService =
+    dependencies.playerService ??
+    new PlayerService(playerRepo, gameEventRepo, gameConfigService);
+
+  const breakthroughRepo =
+    dependencies.breakthroughRepo ?? new BreakthroughRepository(prisma);
+  const breakthroughService =
+    dependencies.breakthroughService ??
+    new BreakthroughService(
+      breakthroughRepo,
+      playerRepo,
+      gameConfigService,
+      gameEventRepo
+    );
+
+  const breakthroughScheduler =
+    dependencies.breakthroughScheduler ??
+    new BreakthroughScheduler(breakthroughService, breakthroughRepo);
+  breakthroughService.setScheduler(breakthroughScheduler);
+
+  const leaderboardService =
+    dependencies.leaderboardService ?? new LeaderboardService(prisma);
 
   const authPreHandler = createAuthPreHandler(authService);
 
@@ -152,9 +208,52 @@ export function buildApp(
   registerRealtimeRoutes(app, ticketService, sessionRepo, authPreHandler);
   registerApiKeyRoutes(app, authService, authPreHandler);
   registerCreatorRoutes(app, creatorLookupService, authPreHandler);
+  registerVoiceRoutes(app, voiceStudioService, authPreHandler);
+
+  // Tu Tien Live Game Routes
+  registerGameRoutes(
+    app,
+    {
+      prisma,
+      playerRepo,
+      playerService,
+      breakthroughRepo,
+      breakthroughService,
+      breakthroughScheduler,
+      leaderboardService,
+      gameConfigService,
+      gameEventRepo,
+      eventIngestionService,
+    },
+    authPreHandler
+  );
+
+  registerGameAdminRoutes(
+    app,
+    {
+      prisma,
+      playerRepo,
+      playerService,
+      breakthroughRepo,
+      breakthroughService,
+      gameConfigService,
+    },
+    authPreHandler
+  );
+
+  // Recovery hook on startup (TC-B15 / TC-B16)
+  app.addHook('onReady', async () => {
+    try {
+      await breakthroughScheduler.recover();
+    } catch (err: any) {
+      app.log.error(`Failed to recover breakthrough sessions on startup: ${err.message}`);
+    }
+  });
 
   // Graceful shutdown hooks
   app.addHook('onClose', async () => {
+    breakthroughScheduler.stopAll();
+    gameConfigService.clearCache();
     wsManager.destroy();
     ticketService.destroy();
     await sessionService.destroy();

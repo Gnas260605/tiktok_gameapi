@@ -52,6 +52,18 @@ export function registerDashboardRoutes(fastify: FastifyInstance): void {
   // Stream overlay game, meant to be added as a browser source in OBS / LIVE Studio
   fastify.get('/game', createHtmlHandler('game.html'));
 
+  // Public bootstrap defaults for zero-config onboarding (just enter TikTok ID)
+  fastify.get('/api/v1/public/session-defaults', async () => {
+    return {
+      success: true,
+      data: {
+        defaultApiKey: 'tik_live_acme_secret_key_1234567890abcdef',
+        defaultCreator: 'anvatcomai.food',
+        mode: process.env.TIKTOK_CONNECTOR_MODE || 'live',
+      },
+    };
+  });
+
   // Game art. Names are restricted to a flat whitelist pattern, so no path traversal.
   const assetDir = path.dirname(resolvePublicFile(path.join('game-assets', 'pagoda.png')));
   fastify.get('/game-assets/:file', async (request: FastifyRequest, reply: FastifyReply) => {

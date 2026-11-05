@@ -127,9 +127,20 @@ export class SessionService {
       .connect(normalizedUsername, connectorOptions)
       .then(async (result) => {
         if (result.success) {
+          const roomInfo = connector.getRoomInfo();
           await this.sessionRepo.updateStatus(tenantId, session.id, 'connected', {
             roomId: result.roomId ?? undefined,
             startedAt: new Date(),
+            connectorMetadata: {
+              reconnect: options.reconnect ?? true,
+              mode: options.mode ?? (process.env.TIKTOK_CONNECTOR_MODE || 'mock'),
+              title: roomInfo?.title || null,
+              hlsPullUrl: roomInfo?.hlsPullUrl || null,
+              flvPullUrl: roomInfo?.flvPullUrl || null,
+              coverUrl: roomInfo?.coverUrl || null,
+              ownerNickname: roomInfo?.ownerNickname || null,
+              ownerBio: roomInfo?.ownerBio || null,
+            },
           });
         } else {
           await this.sessionRepo.updateStatus(
@@ -194,6 +205,40 @@ export class SessionService {
     });
 
     return updated ?? session;
+  }
+
+  /**
+   * Sends a chat message into a live session's room.
+   */
+  public async sendChatMessage(
+    tenantId: string,
+    sessionId: string,
+    message: string
+  ): Promise<{ success: boolean; result?: any; error?: string }> {
+    const session = await this.sessionRepo.findById(tenantId, sessionId);
+    if (!session) {
+      const err = new Error('Session not found');
+      (err as any).statusCode = 404;
+      (err as any).code = 'NOT_FOUND';
+      throw err;
+    }
+
+    if (session.status !== 'connected') {
+      const err = new Error(`Cannot send message to a session in '${session.status}' status`);
+      (err as any).statusCode = 400;
+      (err as any).code = 'BAD_REQUEST';
+      throw err;
+    }
+
+    const connector = this.activeConnectors.get(sessionId);
+    if (!connector || typeof connector.sendMessage !== 'function') {
+      const err = new Error('Connector is not active or does not support sending messages');
+      (err as any).statusCode = 503;
+      (err as any).code = 'SERVICE_UNAVAILABLE';
+      throw err;
+    }
+
+    return connector.sendMessage(message);
   }
 
   public getActiveConnector(sessionId: string): ITikTokLiveConnector | undefined {

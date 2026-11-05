@@ -6,3 +6,4 @@ export * from './session.repository';
 export * from './user.repository';
 export * from './event.repository';
 export * from './tenant-settings.repository';
+export * from './game';

@@ -33,7 +33,13 @@ export type TikTokEventType =
   | 'like'
   | 'follow'
   | 'share'
-  | 'roomUser';
+  | 'roomUser'
+  | 'questionNew'
+  | 'linkMicBattle'
+  | 'linkMicArmies'
+  | 'roomPin'
+  | 'superFan'
+  | 'oecLiveShopping';
 
 /**
  * Standardized user identity snapshot extracted from LIVE events.
@@ -116,6 +122,35 @@ export interface RoomUserPayload {
   viewerCount: number;                   // Current concurrent viewers (integer >= 0)
 }
 
+export interface QuestionPayload {
+  questionId?: string | null;
+  questionText: string;
+}
+
+export interface BattlePayload {
+  battleId?: string | null;
+  status?: string | null;
+  teams?: Array<{ teamId: string; score: number; anchorId?: string }>;
+}
+
+export interface RoomPinPayload {
+  pinnedMessageId?: string | null;
+  pinnedComment?: string | null;
+  operatorUserId?: string | null;
+}
+
+export interface SuperFanPayload {
+  level?: number | null;
+  fanType?: string | null;
+}
+
+export interface ShoppingPayload {
+  productId?: string | null;
+  title?: string | null;
+  price?: string | null;
+  imageUrl?: string | null;
+}
+
 /**
  * Map of event types to their corresponding payloads.
  */
@@ -127,6 +162,11 @@ export type EventPayloadMap = {
   follow: FollowPayload;
   share: SharePayload;
   roomUser: RoomUserPayload;
+  questionNew: QuestionPayload;
+  linkMicBattle: BattlePayload;
+  roomPin: RoomPinPayload;
+  superFan: SuperFanPayload;
+  oecLiveShopping: ShoppingPayload;
   connected: { roomId: string };
   disconnected: { reason?: string };
   reconnecting: { attempt: number; delayMs: number };
@@ -142,7 +182,7 @@ export interface CanonicalEvent<T = Record<string, any>> {
   id?: string;                           // Upstream ID or explicit test event ID (omitted if absent upstream)
   tenantId: string;                      // Owning tenant UUID
   sessionId: string;                     // Scoped LIVE session UUID
-  eventType: EventType;                  // member | chat | gift | like | follow | share | roomUser
+  eventType: EventType | string;         // member | chat | gift | like | follow | share | roomUser | extended
   eventTimestamp: Date;                  // Upstream occurred_at timestamp
   user: NormalizedUser | null;           // Normalized user (STRICTLY null for roomUser)
   payload: T;                            // Type-specific event data payload
@@ -161,6 +201,11 @@ export interface RoomInfo {
   title?: string | null;                 // Stream title if available
   viewerCount?: number | null;           // Initial viewer count
   startedAt?: Date | null;               // Broadcast start timestamp
+  hlsPullUrl?: string | null;            // Live stream HLS video feed URL (m3u8)
+  flvPullUrl?: string | null;            // Live stream FLV video feed URL
+  coverUrl?: string | null;              // Live stream cover / thumbnail image URL
+  ownerNickname?: string | null;         // Streamer display nickname
+  ownerBio?: string | null;              // Streamer bio description
 }
 
 /**
@@ -178,6 +223,11 @@ export interface ConnectorOptions {
   reconnectBackoffFactor?: number;       // Default: 2.0
   isMock?: boolean;                      // Forces MockConnector instantiation
   mockTickerIntervalMs?: number;         // Interval for background mock ticker (default: 1000ms)
+  proxyUrl?: string;                     // Optional HTTP/HTTPS proxy URL for got and ws
+  sessionCookies?: {                     // Optional authenticated session cookies for two-way chat & mobile flow
+    sessionId: string;
+    ttTargetIdc?: string;
+  };
 }
 
 /**
@@ -199,6 +249,7 @@ export interface ITikTokLiveConnector extends EventEmitter {
   getStatus(): ConnectionStatus;
   getRoomInfo(): RoomInfo | null;
   isConnected(): boolean;
+  sendMessage?(content: string): Promise<{ success: boolean; result?: any; error?: string }>;
 
   // Strongly typed event emitter method overrides:
   emit(event: string | symbol, ...args: any[]): boolean;

@@ -25,9 +25,13 @@ coverage/
 
 # IDE & OS
 .agents/
+.claude/
 .idea/
 .vscode/
 *.swp
 *.swo
 .DS_Store
 Thumbs.db
+~$*.docx
+*.tmp
+

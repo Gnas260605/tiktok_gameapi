@@ -70,7 +70,8 @@ export class EventIngestionService {
     private readonly eventRepo: EventRepository,
     private readonly userNormalizationService: UserNormalizationService,
     private readonly realtimeBroadcaster?: any,
-    options: EventIngestionServiceOptions = {}
+    options: EventIngestionServiceOptions = {},
+    private readonly gameEventBus?: any
   ) {
     this.options = {
       dedupCacheSize: options.dedupCacheSize ?? 50000,
@@ -249,6 +250,23 @@ export class EventIngestionService {
       connector.on(type, eventHandler);
     });
 
+    const extendedEventTypes = ['questionNew', 'linkMicBattle', 'roomPin', 'superFan', 'oecLiveShopping'];
+    const extendedEventHandler = (event: CanonicalEvent) => {
+      this.realtimeBroadcaster?.broadcastEvent?.(tenantId, sessionId, {
+        id: event.id || `ext_${Date.now()}`,
+        sessionId,
+        type: event.eventType,
+        occurredAt: event.eventTimestamp instanceof Date ? event.eventTimestamp.toISOString() : new Date().toISOString(),
+        receivedAt: new Date().toISOString(),
+        user: event.user,
+        data: event.payload,
+        source: event.source,
+      });
+    };
+    extendedEventTypes.forEach((type) => {
+      connector.on(type, extendedEventHandler);
+    });
+
     connector.on('connected', connectedHandler);
     connector.on('reconnecting', reconnectingHandler);
     connector.on('disconnected', disconnectedHandler);
@@ -260,6 +278,9 @@ export class EventIngestionService {
       unsubscribe: () => {
         eventTypes.forEach((type) => {
           connector.removeListener(type, eventHandler);
+        });
+        extendedEventTypes.forEach((type) => {
+          connector.removeListener(type, extendedEventHandler);
         });
         connector.removeListener('connected', connectedHandler);
         connector.removeListener('reconnecting', reconnectingHandler);
@@ -366,6 +387,15 @@ export class EventIngestionService {
           this.realtimeBroadcaster.broadcast(tenantId, sessionId, { ...persistedEvent, user: persistedUser });
         } catch (broadcastErr: any) {
           console.warn(`Realtime broadcast failed: ${broadcastErr.message}`);
+        }
+      }
+
+      // 6. Forward to Game Event Bus if registered
+      if (this.gameEventBus && typeof this.gameEventBus.publish === 'function') {
+        try {
+          this.gameEventBus.publish(tenantId, sessionId, persistedEvent, persistedUser);
+        } catch (busErr: any) {
+          console.warn(`GameEventBus publish failed for tenant ${tenantId}: ${busErr.message}`);
         }
       }
 

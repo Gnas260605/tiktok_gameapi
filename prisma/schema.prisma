@@ -48,6 +48,77 @@ enum EventType {
   error
 }
 
+enum PlayerGender {
+  male
+  female
+}
+
+enum PlayerStatus {
+  active
+  banned
+}
+
+enum BreakthroughStatus {
+  preparing
+  resolving
+  succeeded
+  failed
+  cancelled
+}
+
+enum BreakthroughResult {
+  success
+  failure
+}
+
+enum BreakthroughTrigger {
+  chat
+  api
+}
+
+enum GiftTxStatus {
+  applied
+  pending
+  failed
+  expired
+}
+
+enum GiftTxType {
+  cultivation
+  breakthrough_bonus
+  cultivation_and_bonus
+  unjoined_pending
+  unpriced
+  ignored_game_disabled
+  overflow_capped
+  admin_adjustment
+}
+
+enum GameEventType {
+  player_joined
+  player_returned
+  exp_gained
+  level_up
+  max_level_reached
+  breakthrough_started
+  breakthrough_bonus
+  breakthrough_succeeded
+  breakthrough_failed
+  breakthrough_cancelled
+  player_adjusted
+  player_reset
+  config_changed
+  command_rejected
+}
+
+enum AdminAction {
+  player_adjust @map("player.adjust")
+  player_reset  @map("player.reset")
+  config_update @map("config.update")
+  realm_update  @map("realm.update")
+  gift_tx_retry @map("gift_tx.retry")
+}
+
 model Tenant {
   id        String       @id @default(uuid()) @db.Uuid
   name      String       @db.VarChar(160)
@@ -55,11 +126,20 @@ model Tenant {
   createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  apiKeys        ApiKey[]
-  liveSessions   LiveSession[]
-  users          User[]
-  events         Event[]
-  tenantSettings TenantSettings?
+  apiKeys              ApiKey[]
+  liveSessions         LiveSession[]
+  users                User[]
+  events               Event[]
+  tenantSettings       TenantSettings?
+  gamePlayers          GamePlayer[]
+  cultivationRealms    CultivationRealm[]
+  cultivationLevels    CultivationLevel[]
+  giftTransactions     GiftTransaction[]
+  breakthroughSessions BreakthroughSession[]
+  breakthroughHistories BreakthroughHistory[]
+  gameEvents           GameEvent[]
+  gameConfigurations   GameConfiguration[]
+  adminAuditLogs       AdminAuditLog[]
 
   @@map("tenants")
 }
@@ -70,6 +150,7 @@ model ApiKey {
   name       String       @db.VarChar(120)
   keyPrefix  String       @unique @map("key_prefix") @db.VarChar(24)
   keyHash    String       @map("key_hash") @db.VarChar(64)
+  scopes     String[]     @default(["*"]) @map("scopes")
   revoked    Boolean      @default(false) @map("revoked")
   status     ApiKeyStatus @default(active)
   expiresAt  DateTime?    @map("expires_at") @db.Timestamptz(6)
@@ -77,7 +158,9 @@ model ApiKey {
   revokedAt  DateTime?    @map("revoked_at") @db.Timestamptz(6)
   createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  gameConfigurations GameConfiguration[]
+  adminAuditLogs     AdminAuditLog[]
 
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([tenantId, status])
@@ -99,8 +182,11 @@ model LiveSession {
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  events Event[]
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events               Event[]
+  giftTransactions     GiftTransaction[]
+  breakthroughSessions BreakthroughSession[]
+  gameEvents           GameEvent[]
 
   @@unique([tenantId, id])
   @@index([tenantId, createdAt(sort: Desc)])
@@ -124,14 +210,16 @@ model User {
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  events Event[]
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events           Event[]
+  gamePlayer       GamePlayer?
+  giftTransactions GiftTransaction[]
 
   @@unique([tenantId, id])
+  @@unique([tenantId, platform, uniqueId])
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([tenantId, lastSeenAt(sort: Desc)])
   @@index([tenantId, platform, platformUserId])
-  @@unique([tenantId, platform, uniqueId])
   @@map("users")
 }
 
@@ -150,10 +238,12 @@ model Event {
   connectorVersion   String?   @map("connector_version") @db.VarChar(80)
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  session LiveSession @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade)
-  user    User?       @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: SetNull)
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session          LiveSession       @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade)
+  user             User?             @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: SetNull)
+  giftTransactions GiftTransaction[]
 
+  @@unique([tenantId, id])
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([tenantId, sessionId, receivedAt(sort: Desc)])
   @@index([tenantId, eventType, receivedAt(sort: Desc)])
@@ -172,4 +262,254 @@ model TenantSettings {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tenant_settings")
+}
+
+model GamePlayer {
+  id                        String       @id @default(uuid()) @db.Uuid
+  tenantId                  String       @map("tenant_id") @db.Uuid
+  userId                    String       @map("user_id") @db.Uuid
+  tiktokUserId              String?      @map("tiktok_user_id") @db.VarChar(120)
+  username                  String       @db.VarChar(255)
+  nickname                  String?      @db.VarChar(255)
+  avatarUrl                 String?      @map("avatar_url") @db.Text
+  gender                    PlayerGender @default(male)
+  realmOrder                Int          @default(1) @map("realm_order") @db.SmallInt
+  level                     Int          @default(1) @db.SmallInt
+  currentExp                BigInt       @default(0) @map("current_exp")
+  totalCultivation          BigInt       @default(0) @map("total_cultivation")
+  totalDiamondsGifted       BigInt       @default(0) @map("total_diamonds_gifted")
+  breakthroughSuccessCount  Int          @default(0) @map("breakthrough_success_count")
+  breakthroughFailCount     Int          @default(0) @map("breakthrough_fail_count")
+  breakthroughCooldownUntil DateTime?    @map("breakthrough_cooldown_until") @db.Timestamptz(6)
+  realmReachedAt            DateTime     @default(now()) @map("realm_reached_at") @db.Timestamptz(6)
+  cultivationReachedAt      DateTime     @default(now()) @map("cultivation_reached_at") @db.Timestamptz(6)
+  giftsReachedAt            DateTime     @default(now()) @map("gifts_reached_at") @db.Timestamptz(6)
+  genderChangedAt           DateTime?    @map("gender_changed_at") @db.Timestamptz(6)
+  status                    PlayerStatus @default(active)
+  version                   Int          @default(0)
+  joinedAt                  DateTime     @default(now()) @map("joined_at") @db.Timestamptz(6)
+  lastActiveAt              DateTime     @default(now()) @map("last_active_at") @db.Timestamptz(6)
+  createdAt                 DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                 User                  @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+  realm                CultivationRealm      @relation(fields: [tenantId, realmOrder], references: [tenantId, realmOrder])
+  giftTransactions     GiftTransaction[]
+  breakthroughSessions BreakthroughSession[]
+  breakthroughHistories BreakthroughHistory[]
+  gameEvents           GameEvent[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, userId])
+  @@index([tenantId, realmOrder(sort: Desc), level(sort: Desc), currentExp(sort: Desc), realmReachedAt(sort: Asc)])
+  @@index([tenantId, totalCultivation(sort: Desc), cultivationReachedAt(sort: Asc)])
+  @@index([tenantId, breakthroughSuccessCount(sort: Desc)])
+  @@index([tenantId, totalDiamondsGifted(sort: Desc), giftsReachedAt(sort: Asc)])
+  @@map("game_players")
+}
+
+model CultivationRealm {
+  id                     String             @id @default(uuid()) @db.Uuid
+  tenantId               String             @map("tenant_id") @db.Uuid
+  realmOrder             Int                @map("realm_order") @db.SmallInt
+  code                   String             @db.VarChar(40)
+  name                   String             @db.VarChar(80)
+  baseChanceBp           Int?               @map("base_chance_bp")
+  chanceBpPer100Diamonds Int?               @map("chance_bp_per_100_diamonds")
+  themeColor             String?            @map("theme_color") @db.Char(7)
+  characterMaleAsset     String             @map("character_male_asset") @db.VarChar(120)
+  characterFemaleAsset   String             @map("character_female_asset") @db.VarChar(120)
+  createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant  Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  levels  CultivationLevel[]
+  players GamePlayer[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, realmOrder])
+  @@unique([tenantId, code])
+  @@map("cultivation_realms")
+}
+
+model CultivationLevel {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  realmOrder  Int      @map("realm_order") @db.SmallInt
+  level       Int      @db.SmallInt
+  requiredExp BigInt   @map("required_exp")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  realm  CultivationRealm @relation(fields: [tenantId, realmOrder], references: [tenantId, realmOrder], onDelete: Cascade)
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, realmOrder, level])
+  @@map("cultivation_levels")
+}
+
+model GiftTransaction {
+  id                    String              @id @default(uuid()) @db.Uuid
+  tenantId              String              @map("tenant_id") @db.Uuid
+  idempotencyKey        String              @map("idempotency_key") @db.VarChar(160)
+  eventId               String?             @map("event_id") @db.Uuid
+  liveSessionId         String              @map("live_session_id") @db.Uuid
+  playerId              String?             @map("player_id") @db.Uuid
+  userId                String              @map("user_id") @db.Uuid
+  breakthroughSessionId String?             @map("breakthrough_session_id") @db.Uuid
+  giftId                String              @map("gift_id") @db.VarChar(120)
+  giftName              String              @map("gift_name") @db.VarChar(255)
+  diamondValue          Int?                @map("diamond_value")
+  giftQuantity          Int                 @default(1) @map("gift_quantity")
+  totalDiamonds         BigInt              @default(0) @map("total_diamonds")
+  cultivationReceived   BigInt              @default(0) @map("cultivation_received")
+  chanceBonusBp         Int                 @default(0) @map("chance_bonus_bp")
+  transactionType       GiftTxType          @map("transaction_type")
+  status                GiftTxStatus        @default(pending)
+  realmBefore           Int?                @map("realm_before") @db.SmallInt
+  levelBefore           Int?                @map("level_before") @db.SmallInt
+  expBefore             BigInt?             @map("exp_before")
+  realmAfter            Int?                @map("realm_after") @db.SmallInt
+  levelAfter            Int?                @map("level_after") @db.SmallInt
+  expAfter              BigInt?             @map("exp_after")
+  errorMessage          String?             @map("error_message") @db.Text
+  occurredAt            DateTime            @map("occurred_at") @db.Timestamptz(6)
+  createdAt             DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  event               Event?               @relation(fields: [tenantId, eventId], references: [tenantId, id])
+  session             LiveSession          @relation(fields: [tenantId, liveSessionId], references: [tenantId, id], onDelete: Cascade)
+  user                User                 @relation(fields: [tenantId, userId], references: [tenantId, id], onDelete: Cascade)
+  player              GamePlayer?          @relation(fields: [tenantId, playerId], references: [tenantId, id])
+  breakthroughSession BreakthroughSession? @relation(fields: [tenantId, breakthroughSessionId], references: [tenantId, id])
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, playerId, createdAt(sort: Desc)])
+  @@index([tenantId, status])
+  @@index([tenantId, userId])
+  @@index([tenantId, liveSessionId, totalDiamonds(sort: Desc)])
+  @@map("gift_transactions")
+}
+
+model BreakthroughSession {
+  id               String              @id @default(uuid()) @db.Uuid
+  tenantId         String              @map("tenant_id") @db.Uuid
+  playerId         String              @map("player_id") @db.Uuid
+  liveSessionId    String              @map("live_session_id") @db.Uuid
+  sourceRealmOrder Int                 @map("source_realm_order") @db.SmallInt
+  targetRealmOrder Int                 @map("target_realm_order") @db.SmallInt
+  baseChanceBp     Int                 @map("base_chance_bp")
+  maxChanceBp      Int                 @default(9500) @map("max_chance_bp")
+  bonusDiamonds    BigInt              @default(0) @map("bonus_diamonds")
+  giftBonusBp      Int                 @default(0) @map("gift_bonus_bp")
+  finalChanceBp    Int?                @map("final_chance_bp")
+  status           BreakthroughStatus  @default(preparing)
+  configSnapshot   Json                @default("{}") @map("config_snapshot") @db.JsonB
+  trigger          BreakthroughTrigger @default(chat)
+  requestKey       String?             @map("request_key") @db.VarChar(160)
+  requestHash      String?             @map("request_hash") @db.Char(64)
+  startedAt        DateTime            @default(now()) @map("started_at") @db.Timestamptz(6)
+  endsAt           DateTime            @map("ends_at") @db.Timestamptz(6)
+  endedAt          DateTime?           @map("ended_at") @db.Timestamptz(6)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant           Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  player           GamePlayer           @relation(fields: [tenantId, playerId], references: [tenantId, id], onDelete: Cascade)
+  session          LiveSession          @relation(fields: [tenantId, liveSessionId], references: [tenantId, id], onDelete: Cascade)
+  giftTransactions GiftTransaction[]
+  history          BreakthroughHistory?
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, requestKey])
+  @@index([tenantId, playerId, createdAt(sort: Desc)])
+  @@index([tenantId, status])
+  @@index([endsAt])
+  @@map("breakthrough_sessions")
+}
+
+model BreakthroughHistory {
+  id                 String             @id @default(uuid()) @db.Uuid
+  tenantId           String             @map("tenant_id") @db.Uuid
+  playerId           String             @map("player_id") @db.Uuid
+  sessionId          String             @unique @map("session_id") @db.Uuid
+  result             BreakthroughResult
+  roll               Int
+  finalChanceBp      Int                @map("final_chance_bp")
+  cultivationPenalty BigInt             @default(0) @map("cultivation_penalty")
+  realmBefore        Int                @map("realm_before") @db.SmallInt
+  expBefore          BigInt             @map("exp_before")
+  realmAfter         Int                @map("realm_after") @db.SmallInt
+  expAfter           BigInt             @map("exp_after")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant  Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  player  GamePlayer          @relation(fields: [tenantId, playerId], references: [tenantId, id], onDelete: Cascade)
+  session BreakthroughSession @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, sessionId])
+  @@index([tenantId, playerId, createdAt(sort: Desc)])
+  @@map("breakthrough_history")
+}
+
+model GameConfiguration {
+  tenantId          String   @map("tenant_id") @db.Uuid
+  configKey         String   @map("config_key") @db.VarChar(80)
+  configValue       Json     @map("config_value") @db.JsonB
+  revision          Int      @default(1)
+  updatedByApiKeyId String?  @map("updated_by_api_key_id") @db.Uuid
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant          Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByApiKey ApiKey? @relation(fields: [updatedByApiKeyId], references: [id], onDelete: SetNull)
+
+  @@id([tenantId, configKey])
+  @@map("game_configurations")
+}
+
+model GameEvent {
+  id            String        @id @default(uuid()) @db.Uuid
+  seq           BigInt        @default(autoincrement())
+  tenantId      String        @map("tenant_id") @db.Uuid
+  liveSessionId String?       @map("live_session_id") @db.Uuid
+  playerId      String?       @map("player_id") @db.Uuid
+  eventType     GameEventType @map("event_type")
+  payload       Json          @default("{}") @db.JsonB
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session LiveSession? @relation(fields: [tenantId, liveSessionId], references: [tenantId, id])
+  player  GamePlayer?  @relation(fields: [tenantId, playerId], references: [tenantId, id])
+
+  @@unique([tenantId, id])
+  @@unique([seq])
+  @@index([tenantId, seq])
+  @@index([tenantId, playerId, createdAt(sort: Desc)])
+  @@map("game_events")
+}
+
+model AdminAuditLog {
+  id            String      @id @default(uuid()) @db.Uuid
+  tenantId      String      @map("tenant_id") @db.Uuid
+  actorApiKeyId String?     @map("actor_api_key_id") @db.Uuid
+  action        AdminAction
+  targetType    String      @map("target_type") @db.VarChar(80)
+  targetId      String      @map("target_id") @db.VarChar(120)
+  before        Json?       @db.JsonB
+  after         Json?       @db.JsonB
+  reason        String      @db.Text
+  requestId     String?     @map("request_id") @db.VarChar(120)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorApiKey ApiKey? @relation(fields: [actorApiKeyId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, id])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, targetType, targetId])
+  @@map("admin_audit_logs")
 }

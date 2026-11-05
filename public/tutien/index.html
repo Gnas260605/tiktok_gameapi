@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tu Tiên Live — TikTok LIVE Overlay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Noto+Serif:ital,wght@0,600;0,700;0,900;1,700&display=swap" rel="stylesheet">
+  <style>
+    /* =====================================================================
+       01. DESIGN TOKENS & RESET
+       ===================================================================== */
+    :root {
+      --bg-primary: #0E1430;
+      --bg-card: rgba(14, 20, 48, 0.82);
+      --bg-card-border: rgba(127, 211, 255, 0.22);
+      --bg-glass: rgba(20, 28, 64, 0.65);
+      
+      --text-main: #FFFFFF;
+      --text-sub: #E8F7FF;
+      --text-dim: #8FA2C8;
+      
+      --gold: #F2C14E;
+      --gold-glow: rgba(242, 193, 78, 0.45);
+      --crimson: #E8452C;
+      --cyan: #7FD3FF;
+      --cyan-glow: rgba(127, 211, 255, 0.35);
+      --emerald: #50E3C2;
+      --violet: #9B6BFF;
+      
+      --realm-color: #7FD3FF;
+      --realm-glow: rgba(127, 211, 255, 0.45);
+      --realm-text: #0B2A3D;
+      
+      --font-display: 'Noto Serif', serif;
+      --font-body: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Be Vietnam Pro', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-primary);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* OBS Transparent Mode (?transparent=1) */
+    body.transparent-mode {
+      background: transparent !important;
+    }
+    body.transparent-mode #overlay-viewport {
+      background: transparent !important;
+    }
+
+    /* =====================================================================
+       02. STAGE VIEWPORT (720 x 1280 EXACT CANVAS)
+       ===================================================================== */
+    #overlay-viewport {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 720px;
+      height: 1280px;
+      transform-origin: center center;
+      transform: translate(-50%, -50%) scale(var(--scale, 1));
+      overflow: hidden;
+      background: radial-gradient(circle at 60% 40%, #151F48 0%, #0E1430 75%, #070B1B 100%);
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+    }
+
+    /* Background celestial nebula & stars */
+    .star-layer {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        radial-gradient(1px 1px at 40px 60px, #ffffff, transparent),
+        radial-gradient(1.5px 1.5px at 150px 180px, #7fd3ff, transparent),
+        radial-gradient(1px 1px at 320px 240px, #ffd000, transparent),
+        radial-gradient(2px 2px at 580px 420px, #ffffff, transparent),
+        radial-gradient(1px 1px at 200px 700px, #9b6bff, transparent),
+        radial-gradient(1.5px 1.5px at 450px 850px, #50e3c2, transparent),
+        radial-gradient(1px 1px at 640px 960px, #ffffff, transparent);
+      background-size: 720px 1280px;
+      opacity: 0.65;
+      pointer-events: none;
+      animation: twinkle 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes twinkle {
+      0% { opacity: 0.45; }
+      100% { opacity: 0.75; }
+    }
+
+    /* =====================================================================
+       03. TOP BAR (0 – 96px)
+       ===================================================================== */
+    #top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 720px;
+      height: 96px;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 40;
+      background: linear-gradient(180deg, rgba(14, 20, 48, 0.95) 0%, rgba(14, 20, 48, 0.65) 75%, transparent 100%);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(127, 211, 255, 0.12);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #1C2D6A 0%, #0B1333 100%);
+      border: 1.5px solid var(--cyan);
+      box-shadow: 0 0 16px var(--cyan-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: #FFFFFF;
+      text-shadow: 0 2px 10px rgba(127, 211, 255, 0.5);
+      line-height: 1.1;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--cyan);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .guide-pill {
+      background: rgba(242, 193, 78, 0.12);
+      border: 1px solid rgba(242, 193, 78, 0.35);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gold);
+      box-shadow: 0 0 12px rgba(242, 193, 78, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #50E3C2;
+      box-shadow: 0 0 8px #50E3C2;
+      animation: pulseDot 2s infinite;
+    }
+
+    .status-dot.disconnected {
+      background: #E8452C;
+      box-shadow: 0 0 8px #E8452C;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+
+    .btn-icon {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-sub);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover {
+      background: rgba(127, 211, 255, 0.2);
+      border-color: var(--cyan);
+      transform: scale(1.05);
+    }
+
+    /* =====================================================================
+       04. MAIN ARENA (96 – 860px)
+       ===================================================================== */
+    #arena {
+      position: absolute;
+      top: 96px;
+      left: 0;
+      width: 720px;
+      height: 764px;
+    }
+
+    /* 4.1 MINI LEADERBOARD (LEFT, x: 24..256px, width: 232px) */
+    #leaderboard-box {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      width: 232px;
+      background: var(--bg-card);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--bg-card-border);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+      z-index: 20;
+    }
+
+    .lb-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .lb-title {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .lb-timer {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+
+    .lb-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .lb-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+
+    .lb-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .lb-rank {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .lb-rank.rank-1 { background: linear-gradient(135deg, #F2C14E, #B8860B); color: #000; font-weight: 900; }
+    .lb-rank.rank-2 { background: linear-gradient(135deg, #E0E0E0, #A0A0A0); color: #000; }
+    .lb-rank.rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513); color: #FFF; }
+
+    .lb-name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .lb-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* 4.2 SPOTLIGHT CHARACTER AREA (RIGHT / CENTER) */
+    #spotlight-area {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 500px;
+      height: 764px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .character-container {
+      position: relative;
+      width: 440px;
+      height: 640px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    /* Layer 1: Aura Ring (behind) */
+    .character-aura {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 460px;
+      height: 460px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--realm-glow) 0%, rgba(127, 211, 255, 0.08) 55%, transparent 75%);
+      box-shadow: 0 0 60px var(--realm-glow);
+      filter: blur(12px);
+      z-index: 1;
+      animation: rotateAura 40s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes rotateAura {
+      0% { transform: translateX(-50%) rotate(0deg); }
+      100% { transform: translateX(-50%) rotate(360deg); }
+    }
+
+    /* Layer 2: Main Character Body */
+    .character-body {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      max-height: 620px;
+      width: auto;
+      object-fit: contain;
+      z-index: 2;
+      filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.8));
+      transform-origin: 50% 100%;
+      animation: breathIdle 3.2s ease-in-out infinite;
+      transition: filter 0.4s ease, transform 0.4s ease;
+    }
+
+    @keyframes breathIdle {
+      0%, 100% { transform: translateX(-50%) scale(1, 1); }
+      50% { transform: translateX(-50%) scale(0.992, 1.014); }
+    }
+
+    /* Layer 3: Energy Orb (Front floating) */
+    .character-orb {
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #FFFFFF 0%, var(--realm-color) 45%, rgba(0,0,0,0.8) 100%);
+      box-shadow: 0 0 25px var(--realm-color), 0 0 50px var(--realm-glow);
+      z-index: 3;
+      pointer-events: none;
+      animation: floatOrb 2.4s ease-in-out infinite;
+      transition: background 0.5s ease, box-shadow 0.5s ease;
+    }
+
+    @keyframes floatOrb {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-3px, -8px) scale(1.08); }
+    }
+
+    /* Fallback Silhouette */
+    .character-silhouette {
+      display: none;
+      width: 320px;
+      height: 520px;
+      z-index: 2;
+      fill: var(--realm-color);
+      filter: drop-shadow(0 0 25px var(--realm-glow));
+    }
+
+    /* =====================================================================
+       05. PLAYER INFO CARD (860 – 1010px)
+       ===================================================================== */
+    #player-card {
+      position: absolute;
+      top: 860px;
+      left: 24px;
+      width: 672px;
+      height: 140px;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1.5px solid var(--bg-card-border);
+      border-radius: 18px;
+      padding: 16px 20px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.55), 0 0 25px rgba(127, 211, 255, 0.08);
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+
+    .avatar-wrap {
+      position: relative;
+      width: 82px;
+      height: 82px;
+      flex-shrink: 0;
+    }
+
+    .player-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2.5px solid var(--realm-color);
+      box-shadow: 0 0 16px var(--realm-glow);
+      object-fit: cover;
+      background: #101633;
+    }
+
+    .realm-badge-icon {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--bg-primary);
+      border: 2px solid var(--realm-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    }
+
+    .player-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .player-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .player-name {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 800;
+      color: #FFFFFF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+    }
+
+    .realm-tag {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--realm-color);
+      background: rgba(127, 211, 255, 0.12);
+      border: 1px solid var(--realm-color);
+      padding: 3px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+    }
+
+    /* Cultivation Progress Bar */
+    .exp-bar-container {
+      position: relative;
+      width: 100%;
+      height: 22px;
+      background: rgba(10, 14, 34, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
+    }
+
+    .exp-bar-fill {
+      height: 100%;
+      width: 45%;
+      border-radius: 11px;
+      background: linear-gradient(90deg, #3A8DFF 0%, var(--realm-color) 70%, #FFFFFF 100%);
+      box-shadow: 0 0 14px var(--realm-color);
+      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .exp-numbers {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+
+    .exp-label {
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+
+    /* =====================================================================
+       06. NOTIFICATION FEED (1010 – 1200px)
+       ===================================================================== */
+    #feed-area {
+      position: absolute;
+      top: 1014px;
+      left: 24px;
+      width: 672px;
+      height: 180px;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 10px;
+      pointer-events: none;
+      z-index: 35;
+    }
+
+    .feed-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(16, 23, 54, 0.9);
+      border: 1px solid rgba(127, 211, 255, 0.25);
+      border-left: 4px solid var(--realm-color);
+      border-radius: 12px;
+      padding: 10px 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      animation: slideInFeed 0.35s cubic-bezier(0.16, 1, 0.3, 1), fadeOutFeed 0.5s ease-out 4.5s forwards;
+      pointer-events: auto;
+    }
+
+    @keyframes slideInFeed {
+      0% { transform: translateY(20px) scale(0.95); opacity: 0; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    @keyframes fadeOutFeed {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-12px); }
+    }
+
+    .feed-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .feed-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .feed-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #FFFFFF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .feed-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .feed-value {
+      font-family: var(--font-mono);
+      font-weight: 800;
+      font-size: 13px;
+      color: var(--gold);
+    }
+
+    /* =====================================================================
+       07. SAFE ZONE (1200 – 1280px, 80px)
+       ===================================================================== */
+    #safe-zone {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 720px;
+      height: 80px;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* =====================================================================
+       08. FULLSCREEN BREAKTHROUGH / TRIBULATION SCREEN
+       ===================================================================== */
+    #tribulation-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(7, 11, 27, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    #tribulation-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .trib-clouds {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      width: 720px;
+      height: 280px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(91, 42, 158, 0.6) 0%, rgba(14, 20, 48, 0.9) 60%, transparent 100%);
+      filter: blur(18px);
+      animation: stormCloud 4s infinite alternate ease-in-out;
+    }
+
+    @keyframes stormCloud {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(1.08); opacity: 1; }
+    }
+
+    .lightning-flash {
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.85);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .trib-badge {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--crimson);
+      text-transform: uppercase;
+      background: rgba(232, 69, 44, 0.15);
+      border: 1px solid rgba(232, 69, 44, 0.4);
+      padding: 6px 18px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 0 16px rgba(232, 69, 44, 0.3);
+    }
+
+    .trib-title {
+      font-family: var(--font-display);
+      font-size: 38px;
+      font-weight: 900;
+      color: #FFFFFF;
+      text-shadow: 0 0 25px rgba(242, 193, 78, 0.6);
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    /* Circular 30s Countdown Clock */
+    .timer-circle-wrap {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin-bottom: 30px;
+    }
+
+    .timer-svg {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+    }
+
+    .timer-bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.1);
+      stroke-width: 10;
+    }
+
+    .timer-progress {
+      fill: none;
+      stroke: var(--crimson);
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 628;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 1s linear, stroke 0.3s;
+    }
+
+    .timer-number {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 56px;
+      font-weight: 900;
+      color: #FFFFFF;
+      text-shadow: 0 0 20px var(--crimson);
+    }
+
+    .timer-sub {
+      font-size: 13px;
+      color: var(--text-dim);
+      font-family: var(--font-body);
+      font-weight: 600;
+    }
+
+    /* Giant Percentage Display (Largest font size on screen) */
+    .chance-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 20px 48px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      margin-bottom: 24px;
+    }
+
+    .chance-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .chance-percent {
+      font-family: var(--font-display);
+      font-size: 76px;
+      font-weight: 900;
+      color: var(--gold);
+      text-shadow: 0 0 35px var(--gold-glow);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .chance-hint {
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #50E3C2;
+      animation: pulseText 1.5s infinite;
+    }
+
+    @keyframes pulseText {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(0.98); }
+    }
+
+    /* Success / Failure Breakthrough Result Banners */
+    #result-banner {
+      position: absolute;
+      inset: 0;
+      z-index: 120;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      text-align: center;
+      padding: 30px;
+    }
+
+    #result-banner.active {
+      display: flex;
+    }
+
+    .result-pillar {
+      position: absolute;
+      bottom: 0;
+      width: 180px;
+      height: 100%;
+      background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.8) 50%, var(--realm-glow) 100%);
+      filter: blur(25px);
+      opacity: 0.9;
+      animation: pillarAscend 1.2s ease-out forwards;
+    }
+
+    @keyframes pillarAscend {
+      0% { height: 0; opacity: 0; }
+      100% { height: 100%; opacity: 0.9; }
+    }
+
+    .result-title {
+      font-family: var(--font-display);
+      font-size: 52px;
+      font-weight: 900;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .result-title.success {
+      color: var(--gold);
+      text-shadow: 0 0 40px var(--gold-glow), 0 0 80px var(--gold);
+    }
+
+    .result-title.failed {
+      color: var(--crimson);
+      text-shadow: 0 0 40px rgba(232, 69, 44, 0.8);
+    }
+
+    .result-desc {
+      font-size: 18px;
+      font-weight: 600;
+      color: #FFFFFF;
+      position: relative;
+      z-index: 10;
+      max-width: 520px;
+      line-height: 1.5;
+    }
+
+    /* Screen Shake for Failure */
+    @keyframes screenShake {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      20% { transform: translate(-52%, -49%) rotate(-1deg); }
+      40% { transform: translate(-48%, -51%) rotate(1deg); }
+      60% { transform: translate(-51%, -50%) rotate(-0.5deg); }
+      80% { transform: translate(-49%, -49%) rotate(0.5deg); }
+      100% { transform: translate(-50%, -50%) rotate(0deg); }
+    }
+    .shake-screen {
+      animation: screenShake 0.25s ease-in-out !important;
+    }
+
+    /* =====================================================================
+       09. DEMO CONTROL PANEL
+       ===================================================================== */
+    #demo-panel {
+      position: absolute;
+      top: 104px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(14, 20, 48, 0.95);
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      padding: 8px 16px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 15px var(--gold-glow);
+      z-index: 90;
+    }
+
+    #demo-panel.visible {
+      display: flex;
+    }
+
+    .demo-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: #FFFFFF;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+
+    .demo-btn:hover {
+      background: var(--gold);
+      color: #000;
+      transform: translateY(-1px);
+    }
+
+    /* =====================================================================
+       10. CONFIGURATION MODAL
+       ===================================================================== */
+    #config-modal {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #config-modal.active {
+      display: flex;
+    }
+
+    .modal-box {
+      width: 460px;
+      background: #121A3E;
+      border: 1.5px solid var(--cyan);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 30px var(--cyan-glow);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+    }
+
+    .modal-subtitle {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: #0B112C;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #FFFFFF;
+      font-family: var(--font-mono);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan-glow);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--text-sub);
+      padding: 8px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2F8CFF 0%, #1565C0 100%);
+      border: none;
+      color: #FFFFFF;
+      padding: 8px 22px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(47, 140, 255, 0.4);
+    }
+
+    /* =====================================================================
+       11. ACCESSIBILITY & PREFERS-REDUCED-MOTION
+       ===================================================================== */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =====================================================================
+       01. MAIN OVERLAY VIEWPORT (720 x 1280 EXACT CANVAS)
+       ===================================================================== -->
+  <div id="overlay-viewport">
+    
+    <!-- Background Star Layer -->
+    <div class="star-layer"></div>
+
+    <!-- 02. TOP BAR -->
+    <header id="top-bar">
+      <div class="brand-wrap">
+        <div class="brand-icon">⚔️</div>
+        <div>
+          <h1 class="brand-title">TU TIÊN LIVE</h1>
+          <div class="brand-subtitle">Thiên Đạo Tu Chân</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="guide-pill">
+          <span class="status-dot" id="ws-indicator" title="Trạng thái WebSocket"></span>
+          <span>Gõ <b>thamgia</b> nhập môn</span>
+        </div>
+        <button class="btn-icon" id="btn-toggle-demo" title="Bật/Tắt Demo Panel">🎮</button>
+        <button class="btn-icon" id="btn-open-settings" title="Cài đặt kết nối">⚙️</button>
+      </div>
+    </header>
+
+    <!-- 03. DEMO PANEL (FLOATING CONTROL BAR) -->
+    <div id="demo-panel">
+      <span style="font-size:11px; font-weight:800; color:var(--gold);">DEMO:</span>
+      <button class="demo-btn" id="demo-gift-rose">🌸 Hoa (1💎)</button>
+      <button class="demo-btn" id="demo-gift-yacht">🛥️ Du Thuyền (100💎)</button>
+      <button class="demo-btn" id="demo-chat-dokiep">⚡ Độ Kiếp</button>
+      <button class="demo-btn" id="demo-chat-nhapmon">✨ Nhập Môn</button>
+      <button class="demo-btn" id="demo-trigger-breakthrough">🔥 Thử Độ Kiếp 30s</button>
+    </div>
+
+    <!-- 04. MAIN ARENA (LEADERBOARD + SPOTLIGHT CHARACTER) -->
+    <main id="arena">
+      
+      <!-- Mini Leaderboard (Rotating 15s) -->
+      <section id="leaderboard-box">
+        <div class="lb-header">
+          <div class="lb-title" id="lb-title">
+            <span>🏆</span> <span id="lb-title-text">BẢNG CẢNH GIỚI</span>
+          </div>
+          <div class="lb-timer" id="lb-timer">15s</div>
+        </div>
+        <ul class="lb-list" id="lb-list">
+          <!-- Dynamically populated via textContent -->
+        </ul>
+      </section>
+
+      <!-- Spotlight Character Area (3 Layers) -->
+      <section id="spotlight-area">
+        <div class="character-container">
+          <!-- Layer 1: Aura Ring -->
+          <div class="character-aura" id="char-aura"></div>
+          
+          <!-- Layer 2: Main Body -->
+          <img class="character-body" id="char-body" src="/tutien-assets/char-luyen-khi-male.png" alt="Nhân vật Tu Tiên">
+          
+          <!-- Silhouette Fallback (Vector SVG) -->
+          <svg class="character-silhouette" id="char-silhouette" viewBox="0 0 100 160">
+            <path d="M50 15 C45 15 40 20 40 28 C40 36 45 42 50 42 C55 42 60 36 60 28 C60 20 55 15 50 15 Z M35 48 C28 55 24 75 22 105 C25 110 32 112 36 100 C38 90 40 75 42 65 C44 80 46 115 42 145 C45 148 55 148 58 145 C54 115 56 80 58 65 C60 75 62 90 64 100 C68 112 75 110 78 105 C76 75 72 55 65 48 C60 45 40 45 35 48 Z"/>
+          </svg>
+
+          <!-- Layer 3: Energy Orb -->
+          <div class="character-orb" id="char-orb"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 05. PLAYER INFO CARD -->
+    <section id="player-card">
+      <div class="avatar-wrap">
+        <img class="player-avatar" id="card-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%23101633'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='28' fill='%237FD3FF'>仙</text></svg>" alt="Avatar">
+        <div class="realm-badge-icon" id="card-realm-icon">💧</div>
+      </div>
+      <div class="player-details">
+        <div class="player-header">
+          <div class="player-name" id="card-nickname">Chưa có Đạo Hữu</div>
+          <div class="realm-tag" id="card-realm-level">Luyện Khí · Tầng 1</div>
+        </div>
+        <div class="exp-bar-container">
+          <div class="exp-bar-fill" id="card-exp-fill"></div>
+        </div>
+        <div class="exp-numbers">
+          <span class="exp-label">Tu Vi Đạo Hạnh</span>
+          <span id="card-exp-text">0 / 1.000 tu vi</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06. NOTIFICATION FEED -->
+    <div id="feed-area">
+      <!-- Up to 3 floating notification cards -->
+    </div>
+
+    <!-- 07. SAFE ZONE (80px at bottom) -->
+    <div id="safe-zone"></div>
+
+    <!-- 08. FULLSCREEN TRIBULATION OVERLAY -->
+    <div id="tribulation-overlay">
+      <div class="trib-clouds"></div>
+      <div class="lightning-flash" id="lightning-flash"></div>
+
+      <div class="trib-badge">⚠️ THIÊN KIẾP GIÁNG LÂM ⚠️</div>
+      <h2 class="trib-title" id="trib-player-title">Đạo Hữu Đang Độ Kiếp!</h2>
+
+      <!-- Circular 30s Countdown Clock -->
+      <div class="timer-circle-wrap">
+        <svg class="timer-svg" viewBox="0 0 220 220">
+          <circle class="timer-bg" cx="110" cy="110" r="100"/>
+          <circle class="timer-progress" id="trib-circle-progress" cx="110" cy="110" r="100"/>
+        </svg>
+        <div class="timer-number">
+          <span id="trib-countdown-num">30</span>
+          <span class="timer-sub">GIÂY</span>
+        </div>
+      </div>
+
+      <!-- Giant Percentage Display -->
+      <div class="chance-box">
+        <div class="chance-label">Tỷ Lệ Độ Kiếp Thành Công</div>
+        <div class="chance-percent" id="trib-chance-percent">25%</div>
+        <div class="chance-hint" id="trib-chance-hint">Tặng quà bất kỳ để tăng tỷ lệ thành công!</div>
+      </div>
+    </div>
+
+    <!-- 09. BREAKTHROUGH RESULT BANNER (SUCCESS / FAILURE) -->
+    <div id="result-banner">
+      <div class="result-pillar" id="result-pillar"></div>
+      <h2 class="result-title" id="result-title">ĐỘ KIẾP THÀNH CÔNG!</h2>
+      <p class="result-desc" id="result-desc">Chúc mừng đạo hữu phá vỡ gông cùm, đăng lâm cảnh giới mới!</p>
+    </div>
+
+    <!-- 10. CONFIGURATION MODAL -->
+    <div id="config-modal">
+      <div class="modal-box">
+        <h3 class="modal-title">Cấu Hình Kết Nối Tu Tiên</h3>
+        <p class="modal-subtitle">Nhập API Key có scope <code>game:overlay</code> và Live Session ID. Key được lưu an toàn trong trình duyệt (localStorage), không xuất hiện trên URL.</p>
+        
+        <div class="form-group">
+          <label class="form-label" for="cfg-api-key">API Key (game:overlay)</label>
+          <input type="password" id="cfg-api-key" class="form-input" placeholder="tikuser_live_...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="cfg-session-id">Live Session ID</label>
+          <input type="text" id="cfg-session-id" class="form-input" placeholder="UUID hoặc để trống để tự tìm">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <input type="checkbox" id="cfg-effects" checked style="margin-right: 6px;"> Bật hiệu ứng hình ảnh (effectsEnabled)
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" id="btn-close-modal">Đóng</button>
+          <button class="btn-primary" id="btn-save-modal">Lưu & Kết Nối</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- =====================================================================
+       12. CONTROLLER LOGIC (PURE JAVASCRIPT, SECURE textContent ONLY)
+       ===================================================================== */ -->
+  <script>
+    (function() {
+      'use strict';
+
+      // -------------------------------------------------------------------
+      // 1. CONFIGURATION & STATE
+      // -------------------------------------------------------------------
+      const STORAGE_KEY_API = 'tutien_overlay_key';
+      const STORAGE_KEY_SESSION = 'tutien_session_id';
+      const STORAGE_KEY_EFFECTS = 'tutien_effects_enabled';
+
+      const REALM_THEMES = {
+        1: { id: 'luyen-khi', name: 'Luyện Khí', color: '#7FD3FF', glow: 'rgba(127, 211, 255, 0.45)', icon: '💧' },
+        2: { id: 'truc-co', name: 'Trúc Cơ', color: '#50E3C2', glow: 'rgba(80, 227, 194, 0.45)', icon: '🍃' },
+        3: { id: 'kim-dan', name: 'Kim Đan', color: '#F5A623', glow: 'rgba(245, 166, 35, 0.45)', icon: '✨' },
+        4: { id: 'nguyen-anh', name: 'Nguyên Anh', color: '#BD10E0', glow: 'rgba(189, 16, 224, 0.45)', icon: '🔮' },
+        5: { id: 'hoa-than', name: 'Hóa Thần', color: '#4A90E2', glow: 'rgba(74, 144, 226, 0.45)', icon: '🐉' },
+        6: { id: 'luyen-hu', name: 'Luyện Hư', color: '#9013FE', glow: 'rgba(144, 19, 254, 0.45)', icon: '🌌' },
+        7: { id: 'hop-the', name: 'Hợp Thể', color: '#D0021B', glow: 'rgba(208, 2, 27, 0.45)', icon: '☯️' },
+        8: { id: 'dai-thua', name: 'Đại Thừa', color: '#F8E71C', glow: 'rgba(248, 231, 28, 0.45)', icon: '🔥' },
+      };
+
+      const LEADERBOARD_TYPES = [
+        { key: 'realm', title: 'BẢNG CẢNH GIỚI', icon: '🏆' },
+        { key: 'wealth', title: 'BẢNG PHÚ HÀO', icon: '💎' },
+        { key: 'speed', title: 'BẢNG TỐC ĐỘ', icon: '⚡' },
+        { key: 'luck', title: 'BẢNG MAY MẮN', icon: '🎲' },
+        { key: 'devotion', title: 'BẢNG CỐNG HIẾN', icon: '🌸' }
+      ];
+
+      const state = {
+        apiKey: localStorage.getItem(STORAGE_KEY_API) || '',
+        sessionId: localStorage.getItem(STORAGE_KEY_SESSION) || '',
+        effectsEnabled: localStorage.getItem(STORAGE_KEY_EFFECTS) !== 'false',
+        manifest: null,
+        socket: null,
+        lastSeq: '0',
+        reconnectAttempts: 0,
+        reconnectTimer: null,
+        spotlightPlayer: null,
+        activeBreakthrough: null,
+        breakthroughTimer: null,
+        breakthroughRemaining: 30,
+        leaderboards: {},
+        currentLbIndex: 0,
+        lbTimer: null,
+        spotlightHoldUntil: 0,
+        isDemo: new URLSearchParams(window.location.search).has('demo'),
+        isTransparent: new URLSearchParams(window.location.search).get('transparent') === '1'
+      };
+
+      // -------------------------------------------------------------------
+      // 2. DOM ELEMENT REFERENCES
+      // -------------------------------------------------------------------
+      const viewportEl = document.getElementById('overlay-viewport');
+      const wsIndicator = document.getElementById('ws-indicator');
+      const charBodyEl = document.getElementById('char-body');
+      const charAuraEl = document.getElementById('char-aura');
+      const charOrbEl = document.getElementById('char-orb');
+      const charSilhouetteEl = document.getElementById('char-silhouette');
+
+      const cardAvatar = document.getElementById('card-avatar');
+      const cardRealmIcon = document.getElementById('card-realm-icon');
+      const cardNickname = document.getElementById('card-nickname');
+      const cardRealmLevel = document.getElementById('card-realm-level');
+      const cardExpFill = document.getElementById('card-exp-fill');
+      const cardExpText = document.getElementById('card-exp-text');
+
+      const lbTitleText = document.getElementById('lb-title-text');
+      const lbTimerText = document.getElementById('lb-timer');
+      const lbList = document.getElementById('lb-list');
+      const feedArea = document.getElementById('feed-area');
+
+      const tribOverlay = document.getElementById('tribulation-overlay');
+      const tribTitle = document.getElementById('trib-player-title');
+      const tribCountdownNum = document.getElementById('trib-countdown-num');
+      const tribCircleProgress = document.getElementById('trib-circle-progress');
+      const tribChancePercent = document.getElementById('trib-chance-percent');
+      const tribChanceHint = document.getElementById('trib-chance-hint');
+      const lightningFlash = document.getElementById('lightning-flash');
+
+      const resultBanner = document.getElementById('result-banner');
+      const resultTitle = document.getElementById('result-title');
+      const resultDesc = document.getElementById('result-desc');
+
+      const demoPanel = document.getElementById('demo-panel');
+      const configModal = document.getElementById('config-modal');
+      const cfgApiKeyInput = document.getElementById('cfg-api-key');
+      const cfgSessionIdInput = document.getElementById('cfg-session-id');
+      const cfgEffectsInput = document.getElementById('cfg-effects');
+
+      // -------------------------------------------------------------------
+      // 3. SECURE NUMBER & TEXT FORMATTERS (SECURE textContent ONLY)
+      // -------------------------------------------------------------------
+      function formatNumber(val) {
+        if (val === null || val === undefined) return '0';
+        const num = typeof val === 'bigint' ? val : BigInt(val.toString() || '0');
+        return num.toLocaleString('vi-VN');
+      }
+
+      function sanitizeText(str) {
+        if (!str) return '';
+        return String(str);
+      }
+
+      // -------------------------------------------------------------------
+      // 4. RESPONSIVE SCALE TO MAINTAIN 720x1280 IN OBS / BROWSER
+      // -------------------------------------------------------------------
+      function fitViewport() {
+        const targetW = 720;
+        const targetH = 1280;
+        const scale = Math.min(window.innerWidth / targetW, window.innerHeight / targetH);
+        document.documentElement.style.setProperty('--scale', scale);
+      }
+      window.addEventListener('resize', fitViewport);
+      fitViewport();
+
+      if (state.isTransparent) {
+        document.body.classList.add('transparent-mode');
+      }
+
+      if (state.isDemo) {
+        demoPanel.classList.add('visible');
+      }
+
+      // -------------------------------------------------------------------
+      // 5. MANIFEST LOADER & ASSET FALLBACK
+      // -------------------------------------------------------------------
+      async function loadManifest() {
+        try {
+          const res = await fetch('/tutien-assets/manifest.json');
+          if (res.ok) {
+            state.manifest = await res.json();
+          }
+        } catch (e) {
+          console.warn('Không tải được manifest.json, dùng fallback cấu hình mặc định', e);
+        }
+      }
+
+      function updateSpotlightCharacter(player) {
+        const order = Math.max(1, Math.min(8, Number(player?.realmOrder) || 1));
+        const theme = REALM_THEMES[order] || REALM_THEMES[1];
+
+        // Apply Realm Color Tokens
+        document.documentElement.style.setProperty('--realm-color', theme.color);
+        document.documentElement.style.setProperty('--realm-glow', theme.glow);
+
+        // Load Asset via Manifest
+        let assetName = `char-${theme.id}-male.png`;
+        let anchor = [0.5, 1.0];
+        let hand = [0.78, 0.30];
+
+        if (state.manifest && state.manifest.realms && state.manifest.realms[theme.id]) {
+          const r = state.manifest.realms[theme.id];
+          const isFemale = player?.gender === 'female';
+          if (isFemale && r.female && r.female.file) {
+            // If female asset exists
+            assetName = r.female.file;
+            anchor = r.female.anchor || anchor;
+          } else {
+            assetName = r.male ? r.male.file : assetName;
+            anchor = r.male ? r.male.anchor : anchor;
+            if (isFemale) {
+              console.warn(`[Asset Fallback] Chưa có ảnh nữ cho ${theme.name}, dùng ảnh nam + khung hồng ngọc.`);
+            }
+          }
+          if (r.orb && r.orb.hand) {
+            hand = r.orb.hand;
+          }
+        }
+
+        // Apply Image with Fallback
+        const imgPath = `/tutien-assets/${assetName}`;
+        charBodyEl.style.display = 'block';
+        charSilhouetteEl.style.display = 'none';
+
+        charBodyEl.onerror = () => {
+          console.warn(`[Asset Missing] Không tìm thấy ${imgPath}, chuyển sang Silhouette vector`);
+          charBodyEl.style.display = 'none';
+          charSilhouetteEl.style.display = 'block';
+        };
+        charBodyEl.src = imgPath;
+
+        // Position Orb near hand (percentage based on container)
+        charOrbEl.style.left = `${hand[0] * 100}%`;
+        charOrbEl.style.top = `${hand[1] * 100}%`;
+        charOrbEl.style.background = `radial-gradient(circle at 35% 35%, #FFFFFF 0%, ${theme.color} 50%, rgba(0,0,0,0.85) 100%)`;
+        charOrbEl.style.boxShadow = `0 0 25px ${theme.color}, 0 0 50px ${theme.glow}`;
+      }
+
+      // -------------------------------------------------------------------
+      // 6. PLAYER CARD & EXP BAR UPDATE (SECURE textContent)
+      // -------------------------------------------------------------------
+      function updatePlayerCard(player) {
+        if (!player) return;
+        state.spotlightPlayer = player;
+
+        const order = Math.max(1, Math.min(8, Number(player.realmOrder) || 1));
+        const theme = REALM_THEMES[order] || REALM_THEMES[1];
+        const level = Number(player.level) || 1;
+
+        // Safe Nickname Display
+        cardNickname.textContent = sanitizeText(player.nickname || player.username || 'Vô Danh Đạo Hữu');
+        
+        // Realm Badge
+        cardRealmIcon.textContent = theme.icon;
+        const maxLevelText = player.isMaxLevel ? ' (Đại Viên Mãn)' : '';
+        cardRealmLevel.textContent = `${theme.name} · Tầng ${level}${maxLevelText}`;
+
+        // Avatar
+        if (player.avatarUrl) {
+          cardAvatar.src = player.avatarUrl;
+        }
+
+        // Female frame fallback if female
+        if (player.gender === 'female') {
+          cardAvatar.style.borderColor = '#FF4081';
+          cardAvatar.style.boxShadow = '0 0 16px rgba(255, 64, 129, 0.5)';
+        } else {
+          cardAvatar.style.borderColor = theme.color;
+          cardAvatar.style.boxShadow = `0 0 16px ${theme.glow}`;
+        }
+
+        // Progress Calculation
+        try {
+          const cur = BigInt(player.currentExp ? player.currentExp.toString() : '0');
+          const req = BigInt(player.requiredExp ? player.requiredExp.toString() : '1000');
+          const percent = req > 0n ? Math.min(100, Number((cur * 100n) / req)) : 0;
+
+          cardExpFill.style.width = `${percent}%`;
+          cardExpText.textContent = `${formatNumber(cur)} / ${formatNumber(req)} tu vi`;
+        } catch (e) {
+          cardExpFill.style.width = '0%';
+          cardExpText.textContent = `0 / 1.000 tu vi`;
+        }
+
+        updateSpotlightCharacter(player);
+      }
+
+      // -------------------------------------------------------------------
+      // 7. NOTIFICATION FEED (MAX 3 CARDS, AUTO FADE)
+      // -------------------------------------------------------------------
+      function addFeedCard(title, desc, value, icon = '✨') {
+        const card = document.createElement('div');
+        card.className = 'feed-card';
+
+        const iconEl = document.createElement('div');
+        iconEl.className = 'feed-icon';
+        iconEl.textContent = icon;
+
+        const contentEl = document.createElement('div');
+        contentEl.className = 'feed-content';
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'feed-title';
+        titleEl.textContent = sanitizeText(title);
+
+        const descEl = document.createElement('div');
+        descEl.className = 'feed-desc';
+        descEl.textContent = sanitizeText(desc);
+
+        contentEl.appendChild(titleEl);
+        contentEl.appendChild(descEl);
+
+        const valueEl = document.createElement('div');
+        valueEl.className = 'feed-value';
+        valueEl.textContent = sanitizeText(value);
+
+        card.appendChild(iconEl);
+        card.appendChild(contentEl);
+        card.appendChild(valueEl);
+
+        feedArea.appendChild(card);
+
+        // Keep maximum 3 cards active
+        while (feedArea.children.length > 3) {
+          feedArea.removeChild(feedArea.firstChild);
+        }
+
+        // Auto remove after 5s
+        setTimeout(() => {
+          if (card.parentNode === feedArea) {
+            feedArea.removeChild(card);
+          }
+        }, 5000);
+      }
+
+      // -------------------------------------------------------------------
+      // 8. MINI LEADERBOARD (ROTATING 15s)
+      // -------------------------------------------------------------------
+      function renderLeaderboard() {
+        const boardMeta = LEADERBOARD_TYPES[state.currentLbIndex];
+        lbTitleText.textContent = boardMeta.title;
+
+        // Clear list
+        while (lbList.firstChild) {
+          lbList.removeChild(lbList.firstChild);
+        }
+
+        const entries = state.leaderboards[boardMeta.key] || [];
+
+        if (entries.length === 0) {
+          const emptyItem = document.createElement('li');
+          emptyItem.className = 'lb-item';
+          emptyItem.style.color = 'var(--text-dim)';
+          emptyItem.textContent = 'Đang chiêu mộ đệ tử...';
+          lbList.appendChild(emptyItem);
+          return;
+        }
+
+        entries.slice(0, 5).forEach((entry, idx) => {
+          const item = document.createElement('li');
+          item.className = 'lb-item';
+
+          const rankEl = document.createElement('span');
+          rankEl.className = `lb-rank rank-${entry.rank || idx + 1}`;
+          rankEl.textContent = String(entry.rank || idx + 1);
+
+          const nameEl = document.createElement('span');
+          nameEl.className = 'lb-name';
+          nameEl.textContent = sanitizeText(entry.nickname || entry.username || `Đạo hữu #${entry.rank}`);
+
+          const badgeEl = document.createElement('span');
+          badgeEl.className = 'lb-badge';
+          
+          if (boardMeta.key === 'realm') {
+            const rTheme = REALM_THEMES[entry.realmOrder || 1] || REALM_THEMES[1];
+            badgeEl.style.background = rTheme.glow;
+            badgeEl.style.color = rTheme.color;
+            badgeEl.textContent = `${rTheme.name} · T${entry.level || 1}`;
+          } else {
+            badgeEl.style.color = 'var(--gold)';
+            badgeEl.textContent = formatNumber(entry.value);
+          }
+
+          item.appendChild(rankEl);
+          item.appendChild(nameEl);
+          item.appendChild(badgeEl);
+          lbList.appendChild(item);
+        });
+      }
+
+      function startLeaderboardRotation() {
+        clearInterval(state.lbTimer);
+        let secondsLeft = 15;
+        lbTimerText.textContent = `${secondsLeft}s`;
+
+        state.lbTimer = setInterval(() => {
+          secondsLeft--;
+          if (secondsLeft <= 0) {
+            secondsLeft = 15;
+            state.currentLbIndex = (state.currentLbIndex + 1) % LEADERBOARD_TYPES.length;
+            renderLeaderboard();
+          }
+          lbTimerText.textContent = `${secondsLeft}s`;
+        }, 1000);
+
+        renderLeaderboard();
+      }
+
+      // -------------------------------------------------------------------
+      // 9. ANIMATION STATES (8 SPEC STATES §2.3)
+      // -------------------------------------------------------------------
+      function triggerCharacterState(actionState) {
+        if (!state.effectsEnabled) return;
+
+        charBodyEl.style.animation = 'none';
+        void charBodyEl.offsetWidth; // trigger reflow
+
+        switch (actionState) {
+          case 'gift':
+            // Nhún 6px + hào quang
+            charBodyEl.style.transform = 'translateX(-50%) translateY(6px)';
+            charBodyEl.style.filter = 'drop-shadow(0 0 25px var(--gold)) brightness(1.2)';
+            setTimeout(() => {
+              charBodyEl.style.transform = 'translateX(-50%)';
+              charBodyEl.style.filter = '';
+              charBodyEl.style.animation = 'breathIdle 3.2s ease-in-out infinite';
+            }, 900);
+            break;
+
+          case 'levelup':
+            // Nhảy 12px + ring
+            charBodyEl.style.transform = 'translateX(-50%) translateY(-12px)';
+            charBodyEl.style.filter = 'drop-shadow(0 0 35px var(--cyan)) brightness(1.3)';
+            setTimeout(() => {
+              charBodyEl.style.transform = 'translateX(-50%)';
+              charBodyEl.style.filter = '';
+              charBodyEl.style.animation = 'breathIdle 3.2s ease-in-out infinite';
+            }, 1400);
+            break;
+
+          case 'cultivating':
+            // Phát sáng viền
+            charBodyEl.style.filter = 'drop-shadow(0 0 30px var(--realm-color)) brightness(1.15)';
+            setTimeout(() => {
+              charBodyEl.style.filter = '';
+              charBodyEl.style.animation = 'breathIdle 3.2s ease-in-out infinite';
+            }, 2500);
+            break;
+
+          case 'failed':
+            // Khuỵu 8 độ, desaturate 60%
+            viewportEl.classList.add('shake-screen');
+            charBodyEl.style.transform = 'translateX(-50%) rotate(-8deg) translateY(8px)';
+            charBodyEl.style.filter = 'grayscale(60%) contrast(0.85)';
+            setTimeout(() => {
+              viewportEl.classList.remove('shake-screen');
+            }, 250);
+            setTimeout(() => {
+              charBodyEl.style.transform = 'translateX(-50%)';
+              charBodyEl.style.filter = '';
+              charBodyEl.style.animation = 'breathIdle 3.2s ease-in-out infinite';
+            }, 4000);
+            break;
+
+          case 'succeeded':
+            // Cột sáng tiên quang
+            charBodyEl.style.filter = 'drop-shadow(0 0 50px #FFFFFF) brightness(1.5)';
+            setTimeout(() => {
+              charBodyEl.style.filter = '';
+              charBodyEl.style.animation = 'breathIdle 3.2s ease-in-out infinite';
+            }, 6000);
+            break;
+
+          default:
+            charBodyEl.style.animation = 'breathIdle 3.2s ease-in-out infinite';
+            break;
+        }
+      }
+
+      // -------------------------------------------------------------------
+      // 10. TRIBULATION & BREAKTHROUGH OVERLAY
+      // -------------------------------------------------------------------
+      function startTribulation(breakthrough, player) {
+        state.activeBreakthrough = breakthrough;
+        tribOverlay.classList.add('active');
+
+        tribTitle.textContent = `${sanitizeText(player?.nickname || player?.username || 'Đạo Hữu')} Đang Độ Kiếp!`;
+        
+        let remaining = 30;
+        state.breakthroughRemaining = remaining;
+        tribCountdownNum.textContent = String(remaining);
+
+        // Chance calculation
+        const chanceBp = Number(breakthrough.currentChanceBp) || 2500;
+        updateTribChance(chanceBp);
+
+        // Flash lightning occasionally
+        let lightningInterval = setInterval(() => {
+          if (!state.effectsEnabled) return;
+          lightningFlash.style.opacity = '0.9';
+          setTimeout(() => { lightningFlash.style.opacity = '0'; }, 80);
+        }, 3000);
+
+        clearInterval(state.breakthroughTimer);
+        state.breakthroughTimer = setInterval(() => {
+          remaining--;
+          state.breakthroughRemaining = remaining;
+          tribCountdownNum.textContent = String(Math.max(0, remaining));
+
+          // Circular progress offset: circumference is 2 * PI * 100 = 628
+          const offset = 628 - (628 * remaining) / 30;
+          tribCircleProgress.style.strokeDashoffset = String(offset);
+
+          if (remaining <= 0) {
+            clearInterval(state.breakthroughTimer);
+            clearInterval(lightningInterval);
+          }
+        }, 1000);
+      }
+
+      function updateTribChance(chanceBp) {
+        const percent = (chanceBp / 100).toFixed(1);
+        tribChancePercent.textContent = `${percent}%`;
+        tribChancePercent.style.transform = 'scale(1.15)';
+        setTimeout(() => {
+          tribChancePercent.style.transform = 'scale(1)';
+        }, 250);
+      }
+
+      function resolveTribulation(result, breakthrough, player) {
+        clearInterval(state.breakthroughTimer);
+        tribOverlay.classList.remove('active');
+
+        resultBanner.classList.add('active');
+
+        if (result === 'succeeded' || result === 'success') {
+          resultTitle.className = 'result-title success';
+          resultTitle.textContent = '🎉 ĐỘ KIẾP THÀNH CÔNG! 🎉';
+          resultDesc.textContent = `Thiên kiếp tan biến! ${sanitizeText(player?.nickname || 'Đạo hữu')} chính thức đăng lâm cảnh giới mới!`;
+          triggerCharacterState('succeeded');
+        } else {
+          resultTitle.className = 'result-title failed';
+          resultTitle.textContent = '⚡ ĐỘ KIẾP THẤT BẠI ⚡';
+          resultDesc.textContent = `Thiên lôi quá mạnh mẽ! Đạo hạnh bị hao tổn, cần tu dưỡng tĩnh tâm.`;
+          triggerCharacterState('failed');
+        }
+
+        setTimeout(() => {
+          resultBanner.classList.remove('active');
+          if (player) {
+            updatePlayerCard(player);
+          }
+        }, 4500);
+      }
+
+      // -------------------------------------------------------------------
+      // 11. WEBSOCKET REALTIME CONNECTION FLOW (Lát 4)
+      // -------------------------------------------------------------------
+      async function apiFetch(endpoint, method = 'GET', body = null) {
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        if (state.apiKey) {
+          headers['X-API-Key'] = state.apiKey;
+        }
+
+        const res = await fetch(endpoint, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : null
+        });
+
+        if (!res.ok) {
+          const err = new Error(`API ${endpoint} trả về lỗi HTTP ${res.status}`);
+          err.status = res.status;
+          throw err;
+        }
+        return res.json();
+      }
+
+      async function findActiveSession() {
+        if (state.sessionId) return state.sessionId;
+        try {
+          const data = await apiFetch('/api/v1/live/sessions?limit=10');
+          const sessions = data.data || [];
+          const active = sessions.find(s => ['connected', 'active', 'reconnecting'].includes(s.status));
+          if (active) {
+            state.sessionId = active.id;
+            localStorage.setItem(STORAGE_KEY_SESSION, active.id);
+            return active.id;
+          }
+        } catch (e) {
+          console.warn('Không tự động tìm được liveSessionId:', e);
+        }
+        return null;
+      }
+
+      async function connectRealtime() {
+        if (state.socket) {
+          try { state.socket.close(); } catch(e) {}
+          state.socket = null;
+        }
+
+        wsIndicator.className = 'status-dot disconnected';
+
+        const sessionId = await findActiveSession();
+        if (!sessionId) {
+          console.warn('[Realtime] Chưa có Live Session ID, đợi cấu hình...');
+          return;
+        }
+
+        if (!state.apiKey) {
+          console.warn('[Realtime] Chưa có API Key, mở modal cấu hình...');
+          configModal.classList.add('active');
+          return;
+        }
+
+        try {
+          // Bước 1: Xin vé WebSocket ticket ngắn hạn
+          const ticketRes = await apiFetch('/api/v1/realtime/tickets', 'POST', {
+            sessionIds: [sessionId]
+          });
+          const ticket = ticketRes.ticket || ticketRes.data?.ticket;
+
+          // Bước 2: Mở kết nối WebSocket
+          const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsUrl = `${protocol}//${location.host}/ws`;
+          const socket = new WebSocket(wsUrl);
+          state.socket = socket;
+
+          socket.onopen = () => {
+            // Bước 3: Xác thực ticket
+            socket.send(JSON.stringify({ action: 'authenticate', ticket }));
+          };
+
+          socket.onmessage = (msg) => {
+            try {
+              const frame = JSON.parse(msg.data);
+              handleSocketMessage(frame);
+            } catch (err) {
+              console.error('Lỗi phân tích WebSocket frame:', err);
+            }
+          };
+
+          socket.onclose = () => {
+            wsIndicator.className = 'status-dot disconnected';
+            scheduleReconnect();
+          };
+
+          socket.onerror = (e) => {
+            console.error('Lỗi kết nối WebSocket:', e);
+          };
+
+        } catch (err) {
+          console.error('Không thể xin ticket hoặc kết nối WebSocket:', err);
+          scheduleReconnect();
+        }
+      }
+
+      function scheduleReconnect() {
+        clearTimeout(state.reconnectTimer);
+        const delay = Math.min(30000, 1000 * Math.pow(2, state.reconnectAttempts));
+        state.reconnectAttempts++;
+        console.log(`[Realtime] Sẽ thử kết nối lại sau ${delay / 1000}s...`);
+
+        state.reconnectTimer = setTimeout(async () => {
+          await connectRealtime();
+          // Sau khi kết nối lại: gọi GET /api/v1/game/state để đồng bộ
+          await syncGameState();
+        }, delay);
+      }
+
+      async function syncGameState() {
+        if (!state.sessionId || !state.apiKey) return;
+        try {
+          const res = await apiFetch(`/api/v1/game/state?liveSessionId=${state.sessionId}`);
+          const gameState = res.data;
+          if (gameState) {
+            state.lastSeq = gameState.lastSeq || state.lastSeq;
+            if (gameState.spotlightPlayer) {
+              updatePlayerCard(gameState.spotlightPlayer);
+            }
+            if (gameState.leaderboards && Array.isArray(gameState.leaderboards)) {
+              gameState.leaderboards.forEach(lb => {
+                state.leaderboards[lb.board] = lb.entries;
+              });
+              renderLeaderboard();
+            }
+            if (gameState.activeBreakthroughs && gameState.activeBreakthroughs.length > 0) {
+              startTribulation(gameState.activeBreakthroughs[0], gameState.spotlightPlayer);
+            }
+          }
+        } catch (e) {
+          console.warn('Lỗi đồng bộ /game/state:', e);
+        }
+      }
+
+      function handleSocketMessage(frame) {
+        if (frame.type === 'authenticated') {
+          // Bước 4: Subscribe vào sessionId
+          state.socket.send(JSON.stringify({ action: 'subscribe', sessionId: state.sessionId }));
+        } else if (frame.type === 'subscribed') {
+          state.reconnectAttempts = 0;
+          wsIndicator.className = 'status-dot';
+          console.log('[Realtime] Đã kết nối và subscribe thành công!');
+          syncGameState();
+        } else if (frame.type === 'game') {
+          handleGameFrame(frame);
+        }
+      }
+
+      // -------------------------------------------------------------------
+      // 12. GAME EVENT DISPATCHER (STRICT lastSeq DEDUPLICATION)
+      // -------------------------------------------------------------------
+      function handleGameFrame(frame) {
+        const { event, seq, data } = frame;
+
+        // Skip older frames if seq <= lastSeq
+        if (seq && state.lastSeq) {
+          try {
+            if (BigInt(seq) <= BigInt(state.lastSeq)) {
+              return;
+            }
+          } catch(e) {}
+        }
+        if (seq) state.lastSeq = seq;
+
+        switch (event) {
+          case 'player.joined':
+          case 'player.returned': {
+            const p = data.player || data;
+            addFeedCard(
+              `${sanitizeText(p.nickname || p.username)} đã gia nhập!`,
+              `Cảnh giới ${p.realmName || 'Luyện Khí'} · Tầng ${p.level || 1}`,
+              'Nhập Môn',
+              '✨'
+            );
+            if (!state.spotlightPlayer) {
+              updatePlayerCard(p);
+            }
+            break;
+          }
+
+          case 'exp.gained': {
+            const { giftName, repeatCount, amount, progress, player } = data;
+            const diamonds = Number(data.diamonds || 0);
+
+            addFeedCard(
+              `${sanitizeText(data.nickname || 'Đạo Hữu')} tặng ${giftName || 'Linh Vật'}`,
+              `Cộng dồn +${formatNumber(amount)} tu vi`,
+              `+${formatNumber(amount)}`,
+              '🌸'
+            );
+
+            // Spotlight switch rule: >= 100 diamonds or when idle
+            const now = Date.now();
+            if (diamonds >= 100 || now >= state.spotlightHoldUntil) {
+              if (player) updatePlayerCard(player);
+              else if (data.playerId && state.spotlightPlayer?.id === data.playerId) {
+                // update current
+                if (progress) {
+                  state.spotlightPlayer.currentExp = progress.currentExp;
+                  state.spotlightPlayer.requiredExp = progress.requiredExp;
+                  updatePlayerCard(state.spotlightPlayer);
+                }
+              }
+              state.spotlightHoldUntil = now + 6000; // Hold at least 6s
+            }
+
+            triggerCharacterState('gift');
+            break;
+          }
+
+          case 'level.up': {
+            const { levels, player, newLevel } = data;
+            const lvl = newLevel || (levels && levels.length ? levels[levels.length - 1] : 2);
+
+            addFeedCard(
+              `Đột phá thành công!`,
+              `${sanitizeText(data.nickname || 'Đạo Hữu')} đã thăng lên Tầng ${lvl}!`,
+              `Tầng ${lvl}`,
+              '🌟'
+            );
+
+            if (player) updatePlayerCard(player);
+            triggerCharacterState('levelup');
+            break;
+          }
+
+          case 'level.max': {
+            addFeedCard(
+              `Đại Viên Mãn!`,
+              `Đã đạt đỉnh phong, gõ "do kiep" để đột phá cảnh giới!`,
+              `Độ Kiếp`,
+              '⚡'
+            );
+            break;
+          }
+
+          case 'breakthrough.started': {
+            const bt = data.breakthrough || data;
+            startTribulation(bt, data.player || state.spotlightPlayer);
+            break;
+          }
+
+          case 'breakthrough.bonus': {
+            const { currentChanceBp } = data;
+            updateTribChance(currentChanceBp);
+            addFeedCard(
+              `Gia tăng tỷ lệ độ kiếp!`,
+              `Tặng quà hỗ trợ thiên kiếp (+${((data.bonusBp || 100) / 100).toFixed(1)}%)`,
+              `+Hộ Pháp`,
+              '🛡️'
+            );
+            break;
+          }
+
+          case 'breakthrough.resolved': {
+            const { result, breakthrough, player } = data;
+            resolveTribulation(result, breakthrough, player);
+            break;
+          }
+
+          case 'breakthrough.cancelled': {
+            clearInterval(state.breakthroughTimer);
+            tribOverlay.classList.remove('active');
+            break;
+          }
+
+          case 'leaderboard.updated': {
+            const { board, entries } = data;
+            if (board && Array.isArray(entries)) {
+              state.leaderboards[board] = entries;
+              if (LEADERBOARD_TYPES[state.currentLbIndex].key === board) {
+                renderLeaderboard();
+              }
+            }
+            break;
+          }
+
+          case 'config.changed': {
+            if (data.flags) {
+              state.effectsEnabled = data.flags.effectsEnabled !== false;
+            }
+            break;
+          }
+
+          default:
+            break;
+        }
+      }
+
+      // -------------------------------------------------------------------
+      // 13. DEMO SIMULATOR INTERACTION (Lát 7)
+      // -------------------------------------------------------------------
+      async function triggerDemoSimulate(kind, payload) {
+        if (!state.sessionId) {
+          await findActiveSession();
+        }
+
+        try {
+          await apiFetch('/api/v1/game/demo/simulate', 'POST', {
+            liveSessionId: state.sessionId,
+            kind,
+            username: payload.username || 'daohu_demo',
+            comment: payload.comment,
+            giftId: payload.giftId,
+            repeatCount: payload.repeatCount || 1
+          });
+        } catch (err) {
+          // If server is not in mock mode or API is offline, gracefully demonstrate visually
+          console.warn('Backend simulate endpoint trả về lỗi (có thể chưa ở mock mode):', err);
+          simulateLocalDemoFallback(kind, payload);
+        }
+      }
+
+      function simulateLocalDemoFallback(kind, payload) {
+        if (kind === 'gift') {
+          handleGameFrame({
+            type: 'game',
+            event: 'exp.gained',
+            seq: String(Date.now()),
+            data: {
+              nickname: 'Lý Tiêu Dao',
+              giftName: payload.giftId === 'gift_yacht' ? 'Du Thuyền' : 'Hoa Hồng',
+              repeatCount: payload.repeatCount || 1,
+              amount: payload.giftId === 'gift_yacht' ? 10000 : 100,
+              diamonds: payload.giftId === 'gift_yacht' ? 100 : 1,
+              progress: { currentExp: '45000', requiredExp: '62500' },
+              player: {
+                id: 'demo-1',
+                nickname: 'Lý Tiêu Dao',
+                username: 'lytieudao',
+                realmOrder: 3,
+                realmName: 'Kim Đan',
+                level: 7,
+                currentExp: '45000',
+                requiredExp: '62500',
+                gender: 'male'
+              }
+            }
+          });
+        } else if (kind === 'chat') {
+          if (payload.comment === 'do kiep') {
+            startTribulation({ id: 'bt-demo', currentChanceBp: 3500 }, state.spotlightPlayer || { nickname: 'Lý Tiêu Dao' });
+          } else {
+            handleGameFrame({
+              type: 'game',
+              event: 'player.joined',
+              seq: String(Date.now()),
+              data: {
+                player: {
+                  nickname: 'Bạch Thiển',
+                  username: 'bachthien',
+                  realmOrder: 2,
+                  realmName: 'Trúc Cơ',
+                  level: 3,
+                  gender: 'female'
+                }
+              }
+            });
+          }
+        }
+      }
+
+      // Attach Demo Buttons
+      document.getElementById('demo-gift-rose').addEventListener('click', () => {
+        triggerDemoSimulate('gift', { giftId: 'gift_rose', repeatCount: 1 });
+      });
+
+      document.getElementById('demo-gift-yacht').addEventListener('click', () => {
+        triggerDemoSimulate('gift', { giftId: 'gift_yacht', repeatCount: 1 });
+      });
+
+      document.getElementById('demo-chat-dokiep').addEventListener('click', () => {
+        triggerDemoSimulate('chat', { comment: 'do kiep' });
+      });
+
+      document.getElementById('demo-chat-nhapmon').addEventListener('click', () => {
+        triggerDemoSimulate('chat', { comment: 'nhap mon' });
+      });
+
+      document.getElementById('demo-trigger-breakthrough').addEventListener('click', () => {
+        startTribulation({ id: 'demo-trial', currentChanceBp: 4200 }, state.spotlightPlayer);
+        setTimeout(() => {
+          resolveTribulation('succeeded', { id: 'demo-trial' }, {
+            nickname: state.spotlightPlayer?.nickname || 'Lý Tiêu Dao',
+            realmOrder: Math.min(8, (state.spotlightPlayer?.realmOrder || 1) + 1),
+            level: 1,
+            currentExp: '0',
+            requiredExp: '150000'
+          });
+        }, 6000);
+      });
+
+      // -------------------------------------------------------------------
+      // 14. MODAL & SETTINGS HANDLERS
+      // -------------------------------------------------------------------
+      document.getElementById('btn-open-settings').addEventListener('click', () => {
+        cfgApiKeyInput.value = state.apiKey;
+        cfgSessionIdInput.value = state.sessionId;
+        cfgEffectsInput.checked = state.effectsEnabled;
+        configModal.classList.add('active');
+      });
+
+      document.getElementById('btn-close-modal').addEventListener('click', () => {
+        configModal.classList.remove('active');
+      });
+
+      document.getElementById('btn-save-modal').addEventListener('click', () => {
+        state.apiKey = cfgApiKeyInput.value.trim();
+        state.sessionId = cfgSessionIdInput.value.trim();
+        state.effectsEnabled = cfgEffectsInput.checked;
+
+        localStorage.setItem(STORAGE_KEY_API, state.apiKey);
+        localStorage.setItem(STORAGE_KEY_SESSION, state.sessionId);
+        localStorage.setItem(STORAGE_KEY_EFFECTS, String(state.effectsEnabled));
+
+        configModal.classList.remove('active');
+        connectRealtime();
+      });
+
+      document.getElementById('btn-toggle-demo').addEventListener('click', () => {
+        demoPanel.classList.toggle('visible');
+      });
+
+      // -------------------------------------------------------------------
+      // 15. INITIALIZATION SEQUENCE
+      // -------------------------------------------------------------------
+      async function init() {
+        console.log('🚀 Khởi tạo Tu Tiên Live Overlay 720x1280...');
+        await loadManifest();
+
+        // Default initial mockup spotlight player until real data loads
+        updatePlayerCard({
+          id: 'init-player',
+          nickname: 'Lý Tiêu Dao',
+          username: 'lytieudao',
+          realmOrder: 1,
+          realmName: 'Luyện Khí',
+          level: 1,
+          currentExp: '450',
+          requiredExp: '1000',
+          gender: 'male'
+        });
+
+        // Initialize Leaderboard Mockup/Placeholder
+        state.leaderboards['realm'] = [
+          { rank: 1, nickname: 'Hàn Lập', realmOrder: 5, level: 9, value: 59000 },
+          { rank: 2, nickname: 'Bạch Thiển', realmOrder: 4, level: 7, value: 42000 },
+          { rank: 3, nickname: 'Tiêu Viêm', realmOrder: 3, level: 10, value: 31000 },
+          { rank: 4, nickname: 'Từ Phượng Niên', realmOrder: 2, level: 6, value: 18000 },
+          { rank: 5, nickname: 'Lâm Động', realmOrder: 1, level: 8, value: 8500 }
+        ];
+
+        startLeaderboardRotation();
+        connectRealtime();
+      }
+
+      init();
+
+    })();
+  </script>
+</body>
+</html>

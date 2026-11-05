@@ -126,6 +126,11 @@ export class MockConnector extends BaseConnector {
       title: `LIVE with @${this.creatorUsername}`,
       viewerCount: this.currentViewerCount,
       startedAt: new Date(),
+      hlsPullUrl: `https://pull-hls.mock.tiktokcdn.com/live/${mockRoomId}.m3u8`,
+      flvPullUrl: `https://pull-flv.mock.tiktokcdn.com/live/${mockRoomId}.flv`,
+      coverUrl: 'https://p16-sign.tiktokcdn.com/mock-cover.webp',
+      ownerNickname: `Creator @${this.creatorUsername}`,
+      ownerBio: 'Official Mock Streamer Bio',
     };
 
     this.transitionTo('connected');
@@ -150,6 +155,35 @@ export class MockConnector extends BaseConnector {
     this.stopTicker();
     this.clearReconnectTimer();
     this.transitionTo('disconnected', reason);
+  }
+
+  /**
+   * Simulates sending a chat message into the mock LIVE room.
+   */
+  public async sendMessage(content: string): Promise<{ success: boolean; result?: any; error?: string }> {
+    if (!this.isConnected()) {
+      return { success: false, error: 'Connector is not connected' };
+    }
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      return { success: false, error: 'Message content cannot be empty' };
+    }
+    const trimmed = content.trim();
+    const messageId = `mock_msg_${Date.now()}`;
+    this.simulateEvent('chat', {
+      comment: trimmed,
+      text: trimmed,
+      messageId,
+    }, {
+      platform: 'tiktok',
+      platformUserId: 'mock_bot_user_001',
+      uniqueId: 'tikuser_bot',
+      nickname: 'TikUser System Bot',
+      avatarUrl: 'https://p16-sign.tiktokcdn.com/avatar.webp',
+      verified: true,
+      identityQuality: 'platform_id',
+    }, messageId);
+
+    return { success: true, result: { messageId } };
   }
 
   // =========================================================================

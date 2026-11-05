@@ -3,20 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leo Chùa — TikUser LIVE Game</title>
+  <title>Leo Chùa — TikUser ProMax LIVE Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Outfit:wght@500;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0b0d14;
-      --panel: rgba(14, 17, 28, 0.94);
-      --border: rgba(255, 255, 255, 0.12);
+      --bg: #07090e;
+      --panel-bg: rgba(13, 17, 28, 0.88);
+      --panel-border: rgba(255, 255, 255, 0.1);
+      --panel-glow: rgba(254, 44, 85, 0.15);
       --text: #f3f4f6;
-      --muted: #9ca3af;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
       --accent: #fe2c55;
+      --accent-glow: rgba(254, 44, 85, 0.35);
+      --cyan: #25f4ee;
+      --cyan-glow: rgba(37, 244, 238, 0.3);
       --gold: #ffd000;
-      --font: 'Outfit', system-ui, sans-serif;
+      --gold-glow: rgba(255, 208, 0, 0.3);
+      --emerald: #00f2a9;
+      --font-display: 'Outfit', system-ui, sans-serif;
+      --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,7 +36,9 @@
       overflow: hidden;
       background: var(--bg);
       color: var(--text);
-      font-family: var(--font);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
     }
 
     #stage {
@@ -36,24 +47,381 @@
       height: 100vh;
     }
 
-    #gearBtn {
+    /* -------------------------------------------------------------
+       Top Floating Island (Streamer Status Bar)
+       ------------------------------------------------------------- */
+    #topIsland {
       position: fixed;
-      bottom: 12px;
-      right: 12px;
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--panel);
-      color: var(--text);
-      font-size: 18px;
-      cursor: pointer;
-      opacity: 0.25;
-      transition: opacity 0.2s;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      padding: 6px 14px 6px 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(254, 44, 85, 0.08);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    #gearBtn:hover { opacity: 1; }
+    #topIsland.hidden-obs {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -30px);
+    }
 
+    .streamer-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .streamer-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      object-fit: cover;
+      background: #1f293d;
+    }
+
+    .streamer-info {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .streamer-name {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .streamer-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .live-beacon {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulseBeacon 1.4s infinite;
+    }
+
+    @keyframes pulseBeacon {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .island-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--panel-border);
+    }
+
+    .island-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      color: var(--text);
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 5px 11px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .island-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .island-btn.active {
+      background: rgba(254, 44, 85, 0.18);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* -------------------------------------------------------------
+       Streamer Studio Pro Dock (Floating Control Panel)
+       ------------------------------------------------------------- */
+    #studioDock {
+      position: fixed;
+      top: 70px;
+      right: 16px;
+      bottom: 20px;
+      width: 350px;
+      max-width: calc(100vw - 32px);
+      z-index: 40;
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 0, 0, 0.3);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s;
+    }
+
+    #studioDock.collapsed {
+      transform: translateX(380px);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .dock-header {
+      padding: 14px 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .dock-title {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: #fff;
+    }
+
+    .dock-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dock-close:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .dock-tabs {
+      display: flex;
+      padding: 8px 12px;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.25);
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .dock-tab {
+      flex: 1;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 6px 4px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .dock-tab:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .dock-tab.active {
+      background: rgba(254, 44, 85, 0.15);
+      border-color: rgba(254, 44, 85, 0.4);
+      color: #fff;
+    }
+
+    .dock-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .dock-pane {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .dock-pane.active {
+      display: flex;
+    }
+
+    /* Mock Buttons Grid */
+    .mock-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-action:active {
+      transform: translateY(0);
+    }
+
+    .btn-action.gold { border-color: rgba(255, 208, 0, 0.3); color: var(--gold); }
+    .btn-action.red { border-color: rgba(254, 44, 85, 0.3); color: var(--accent); }
+    .btn-action.cyan { border-color: rgba(37, 244, 238, 0.3); color: var(--cyan); }
+
+    /* Voice Studio Controls */
+    .voice-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .voice-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .voice-badge {
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(0, 242, 169, 0.15);
+      color: var(--emerald);
+      font-weight: 800;
+      font-family: var(--font-mono);
+    }
+
+    .input-field {
+      width: 100%;
+      background: #090c14;
+      border: 1px solid var(--panel-border);
+      border-radius: 9px;
+      color: #fff;
+      padding: 8px 11px;
+      font-size: 0.8rem;
+      font-family: var(--font-body);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-field:focus {
+      border-color: var(--cyan);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.77rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .toggle-row input {
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Live Chat Box */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 240px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.78rem;
+    }
+
+    .chat-item {
+      display: flex;
+      gap: 6px;
+      line-height: 1.3;
+    }
+
+    .chat-user {
+      color: var(--cyan);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .chat-text {
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .chat-input-bar {
+      display: flex;
+      padding: 6px;
+      gap: 6px;
+      background: rgba(14, 18, 30, 0.9);
+      border-top: 1px solid var(--panel-border);
+    }
+
+    /* -------------------------------------------------------------
+       Setup Modal (ProMax Minimalist Onboarding)
+       ------------------------------------------------------------- */
     #setup {
       position: fixed;
       inset: 0;
@@ -61,134 +429,534 @@
       align-items: center;
       justify-content: center;
       padding: 16px;
-      background: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(6px);
+      background: rgba(3, 5, 9, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 100;
+      transition: opacity 0.3s;
     }
 
-    #setup.hidden { display: none; }
+    #setup.hidden {
+      display: none;
+      pointer-events: none;
+    }
 
     .setup-card {
       width: 100%;
-      max-width: 380px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 22px;
+      max-width: 420px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 22px;
+      padding: 26px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px var(--panel-glow);
+      display: flex;
+      flex-direction: column;
+      position: relative;
     }
 
-    .setup-card h1 {
-      font-size: 1.5rem;
-      font-weight: 800;
-      margin-bottom: 4px;
+    .setup-glow {
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--gold), transparent);
     }
 
-    .setup-card p.sub {
-      color: var(--muted);
-      font-size: 0.85rem;
-      margin-bottom: 18px;
-      line-height: 1.4;
+    .setup-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
     }
 
-    .setup-card label {
-      display: block;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted);
-      margin: 12px 0 6px;
+    .setup-icon {
+      font-size: 2.2rem;
+      line-height: 1;
     }
 
-    .setup-card input, .setup-card select {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: #0b0e16;
-      color: var(--text);
-      font-family: var(--font);
-      font-size: 0.95rem;
-    }
-
-    .setup-card button {
-      width: 100%;
-      margin-top: 18px;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      background: var(--accent);
+    .setup-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
       color: #fff;
-      font-family: var(--font);
-      font-size: 1rem;
+    }
+
+    .setup-badge {
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(254, 44, 85, 0.2);
+      color: var(--accent);
+      font-weight: 800;
+      border: 1px solid rgba(254, 44, 85, 0.4);
+    }
+
+    .setup-sub {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+      line-height: 1.45;
+    }
+
+    /* Mode Segmented Control */
+    .mode-pills {
+      display: flex;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+
+    .mode-pill {
+      flex: 1;
+      padding: 8px 6px;
+      text-align: center;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.76rem;
       font-weight: 700;
       cursor: pointer;
+      transition: all 0.2s;
     }
 
-    .setup-card button:disabled { opacity: 0.6; cursor: wait; }
+    .mode-pill.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 12px;
+      font-size: 1rem;
+      color: var(--text-dim);
+    }
+
+    .main-input {
+      width: 100%;
+      background: #090c15;
+      border: 1.5px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 12px 14px 12px 38px;
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 1.05rem;
+      font-weight: 600;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .main-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 16px var(--accent-glow);
+      background: #0c101d;
+    }
+
+    /* Quick ID Chips */
+    .quick-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .quick-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .quick-chip:hover {
+      background: rgba(254, 44, 85, 0.15);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Collapsed Accordion */
+    .advanced-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.74rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 6px 0;
+      margin-bottom: 6px;
+    }
+
+    .advanced-toggle:hover {
+      color: var(--text-muted);
+    }
+
+    .advanced-box {
+      display: none;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 14px;
+    }
+
+    .advanced-box.open {
+      display: block;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #fe2c55, #ff4c72);
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      box-shadow: 0 8px 24px var(--accent-glow);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(254, 44, 85, 0.5);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
 
     #setupStatus {
-      margin-top: 12px;
-      font-size: 0.85rem;
-      color: var(--muted);
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
       min-height: 1.2em;
-      line-height: 1.4;
+      text-align: center;
     }
 
-    #setupStatus.error { color: #fca5a5; }
+    #setupStatus.error {
+      color: #fca5a5;
+    }
 
-    .rules {
+    .setup-rules {
       margin-top: 16px;
-      padding-top: 14px;
-      border-top: 1px solid var(--border);
-      font-size: 0.8rem;
-      color: var(--muted);
+      padding-top: 12px;
+      border-top: 1px solid var(--panel-border);
+      font-size: 0.75rem;
+      color: var(--text-muted);
       line-height: 1.6;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .rule-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* OBS Clean Mode Hint */
+    #obsHint {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 8px;
+      border-radius: 6px;
+      z-index: 30;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
+  <!-- Canvas Game Stage -->
   <canvas id="stage"></canvas>
-  <button id="gearBtn" title="Cài đặt (phím S)">⚙️</button>
 
-  <div id="setup">
-    <form class="setup-card" id="setupForm">
-      <h1>🛕 Leo Chùa</h1>
-      <p class="sub">Người xem leo bậc thang lên chùa bằng bình luận, thả tim và quà. Ai gõ chuông trước thắng vòng.</p>
+  <!-- Top Floating Island HUD -->
+  <header id="topIsland">
+    <div class="streamer-pill" onclick="toggleSetupModal()" title="Bấm để đổi kênh hoặc cài đặt">
+      <img id="islandAvatar" class="streamer-avatar" src="/game-assets/logo.png" alt="Streamer">
+      <div class="streamer-info">
+        <span id="islandName" class="streamer-name">Leo Chùa</span>
+        <div class="streamer-badge">
+          <span id="islandBeacon" class="live-beacon"></span>
+          <span id="islandStatusText">OFFLINE</span>
+          <span id="islandViewers">👀 0</span>
+        </div>
+      </div>
+    </div>
 
-      <label for="modeSelect">Chế độ</label>
-      <select id="modeSelect">
-        <option value="live">TikTok LIVE thật</option>
-        <option value="mock">Mock server (kiểm thử)</option>
-        <option value="demo">Demo offline (không cần server)</option>
-      </select>
+    <div class="island-divider"></div>
 
-      <div id="connFields">
-        <label for="userInput">ID TikTok đang LIVE</label>
-        <input id="userInput" autocomplete="off" spellcheck="false" placeholder="vd: anvatcomai.food">
+    <button id="islandVoiceBtn" class="island-btn" onclick="toggleVoiceMute()" title="Bật/Tắt Voice AI TTS">
+      🎙️ <span id="islandVoiceLabel">Voice AI: BẬT</span>
+    </button>
 
-        <label for="keyInput">Tenant API Key</label>
-        <input id="keyInput" type="password" autocomplete="off" placeholder="tik_live_...">
+    <button id="islandSoundBtn" class="island-btn" onclick="toggleMasterSound()" title="Bật/Tắt âm thanh chuông">
+      🔊 <span id="islandSoundLabel">Chuông</span>
+    </button>
+
+    <button class="island-btn active" onclick="toggleStudioDock()" title="Bật/Tắt bảng điều khiển Streamer (Phím S hoặc Tab)">
+      🎛️ Studio
+    </button>
+
+    <button class="island-btn" onclick="toggleObsCleanMode()" title="Chế độ OBS sạch (Ẩn toàn bộ UI nút bấm, phím H)">
+      🖥️ OBS
+    </button>
+  </header>
+
+  <!-- Streamer Studio Pro Dock (Floating Right Drawer) -->
+  <aside id="studioDock">
+    <div class="dock-header">
+      <span class="dock-title">
+        🛕 Streamer Control Panel
+      </span>
+      <button class="dock-close" onclick="toggleStudioDock()" title="Đóng">✕</button>
+    </div>
+
+    <div class="dock-tabs">
+      <button class="dock-tab active" onclick="switchDockTab('tools', this)">🎮 Tương tác</button>
+      <button class="dock-tab" onclick="switchDockTab('voice', this)">🎙️ Voice AI</button>
+      <button class="dock-tab" onclick="switchDockTab('chat', this)">💬 Chat Live</button>
+      <button class="dock-tab" onclick="switchDockTab('stream', this)">📹 Stream</button>
+    </div>
+
+    <div class="dock-body">
+      <!-- Tab 1: Mock & Thao Tác Tương Tác -->
+      <div id="pane-tools" class="dock-pane active">
+        <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: var(--text-dim); letter-spacing: 0.05em;">
+          Bắn sự kiện nhanh (Mock Tools)
+        </div>
+        <div class="mock-grid">
+          <button class="btn-action red" onclick="injectMock('gift_rose')">🎁 Tặng Hoa Hồng</button>
+          <button class="btn-action gold" onclick="injectMock('gift_galaxy')">🌌 Tặng Galaxy (+50)</button>
+          <button class="btn-action red" onclick="injectMock('like')">❤️ Bắn Tim (+3)</button>
+          <button class="btn-action cyan" onclick="injectMock('chat')">💬 Bình Luận (+2)</button>
+          <button class="btn-action" onclick="injectMock('member')">🚪 Người Vào Live</button>
+          <button class="btn-action" onclick="injectMock('follow')">➕ Follow (+10)</button>
+          <button class="btn-action gold" onclick="runHazard(performance.now(), 'monkey')">🐒 Thả Khỉ Cướp Dép</button>
+          <button class="btn-action" onclick="runHazard(performance.now(), 'wc')">💩 Đau Bụng Vào WC</button>
+          <button class="btn-action cyan" onclick="injectMock('paper')">🧻 Gõ Giấy Cứu WC</button>
+          <button class="btn-action gold" onclick="triggerSummitWin()">🔔 Rung Chuông Thắng</button>
+        </div>
+
+        <div style="margin-top: 8px;">
+          <button class="btn-action" style="width: 100%; border-color: rgba(255, 255, 255, 0.15);" onclick="nextRound()">
+            🔄 Khởi Động Vòng Mới
+          </button>
+        </div>
       </div>
 
-      <button type="submit" id="startBtn">▶ Bắt đầu</button>
+      <!-- Tab 2: Voice Studio (AI TTS) -->
+      <div id="pane-voice" class="dock-pane">
+        <div class="voice-card">
+          <div class="voice-header">
+            <span style="font-size: 0.8rem; font-weight: 800;">🎙️ AI Voice Engine</span>
+            <span id="dockVoiceBadge" class="voice-badge">PROBING...</span>
+          </div>
+
+          <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">CHỌN GIỌNG ĐỌC AI</label>
+          <select id="dockVoiceSelect" class="input-field" onchange="onVoiceChanged()">
+            <option value="Minh Đức">🇻🇳 Minh Đức (Nam Bắc - Tự nhiên)</option>
+            <option value="Mai Chi">🇻🇳 Mai Chi (Nữ Bắc - Tự nhiên)</option>
+            <option value="Nam Trung">🇻🇳 Nam Trung (Nam Trung - Truyền cảm)</option>
+            <option value="Thu Ngân">🇻🇳 Thu Ngân (Nữ Nam - Ngọt ngào)</option>
+            <option value="Hải Đăng">🇻🇳 Hải Đăng (Nam Bắc - Tin tức)</option>
+            <option value="Lan Anh">🇻🇳 Lan Anh (Nữ Bắc - Dịu dàng)</option>
+            <option value="vi_female">🇻🇳 Nữ Chuẩn (Studio)</option>
+            <option value="vi_male">🇻🇳 Nam Chuẩn (Ấm áp)</option>
+            <option value="en_female">🇺🇸 English Female</option>
+            <option value="en_male">🇺🇸 English Male</option>
+          </select>
+
+          <button class="btn-action cyan" style="margin-top: 4px;" onclick="testVoicePlayback()">
+            🔊 Thử Giọng Đọc Này
+          </button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 4px 2px;">
+          <label class="toggle-row">
+            <input type="checkbox" id="ttsGiftToggle" checked>
+            <span>Đọc cảm ơn khi người xem tặng quà</span>
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" id="ttsRescueToggle" checked>
+            <span>Đọc cổ vũ khi có người cứu kẹt WC ("giấy")</span>
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" id="ttsWinnerToggle" checked>
+            <span>Đọc chúc mừng khi có người gõ chuông</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Tab 3: Chat 2 Chiều -->
+      <div id="pane-chat" class="dock-pane">
+        <div class="chat-container">
+          <div id="chatMessages" class="chat-messages">
+            <div class="chat-item">
+              <span class="chat-user">Hệ thống:</span>
+              <span class="chat-text">Kết nối TikTok LIVE để nhận bình luận trực tiếp...</span>
+            </div>
+          </div>
+          <form class="chat-input-bar" onsubmit="handleSendChat(event)">
+            <input id="chatInputText" class="input-field" style="padding: 6px 10px; font-size: 0.75rem;" placeholder="Nhắn tin lên LIVE..." autocomplete="off">
+            <button type="submit" class="btn-action red" style="padding: 6px 12px; font-size: 0.75rem;">Gửi</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tab 4: Stream URLs & OBS -->
+      <div id="pane-stream" class="dock-pane">
+        <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
+          Liên kết trích xuất từ TikTok LIVE Connector (dùng cho OBS Browser Source hoặc VLC):
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label class="form-label">HLS Stream URL (.m3u8)</label>
+          <div style="display: flex; gap: 6px;">
+            <input id="streamHlsUrl" class="input-field" style="font-size: 0.72rem; font-family: var(--font-mono);" readonly value="Chưa kết nối">
+            <button class="btn-action" style="padding: 6px 10px;" onclick="copyText('streamHlsUrl')">Copy</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">FLV Pull URL</label>
+          <div style="display: flex; gap: 6px;">
+            <input id="streamFlvUrl" class="input-field" style="font-size: 0.72rem; font-family: var(--font-mono);" readonly value="Chưa kết nối">
+            <button class="btn-action" style="padding: 6px 10px;" onclick="copyText('streamFlvUrl')">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Setup Modal (ProMax Minimalist Onboarding) -->
+  <div id="setup">
+    <form class="setup-card" id="setupForm" onsubmit="handleSetupSubmit(event)">
+      <div class="setup-glow"></div>
+      
+      <div class="setup-header">
+        <span class="setup-icon">🛕</span>
+        <div>
+          <div style="display: flex; align-items: center; gap: 7px;">
+            <h1 class="setup-title">Leo Chùa</h1>
+            <span class="setup-badge">PRO MAX</span>
+          </div>
+        </div>
+      </div>
+      <p class="setup-sub">
+        Chỉ cần nhập ID TikTok để bắt đầu tương tác ngay với người xem!
+      </p>
+
+      <!-- Mode Selector -->
+      <div class="mode-pills">
+        <button type="button" class="mode-pill active" onclick="selectMode('live', this)">🔴 LIVE Thật</button>
+        <button type="button" class="mode-pill" onclick="selectMode('mock', this)">🧪 Mock Server</button>
+        <button type="button" class="mode-pill" onclick="selectMode('demo', this)">🎮 Demo Mẫu</button>
+      </div>
+
+      <!-- Main TikTok ID Input (The ONLY Required Input!) -->
+      <div class="form-group" id="userGroup">
+        <label class="form-label" for="userInput">
+          <span>ID TikTok đang phát LIVE</span>
+          <span style="color: var(--accent); font-size: 0.7rem;">(Bắt buộc)</span>
+        </label>
+        <div class="input-wrapper">
+          <span class="input-icon">@</span>
+          <input id="userInput" class="main-input" autocomplete="off" spellcheck="false" placeholder="vd: anvatcomai.food" autofocus>
+        </div>
+
+        <div class="quick-chips">
+          <span class="quick-chip" onclick="applyQuickId('anvatcomai.food')">⚡ anvatcomai.food</span>
+          <span class="quick-chip" onclick="applyQuickId('linhlinh.live')">⚡ linhlinh.live</span>
+          <span class="quick-chip" onclick="applyQuickId('mock_creator')">⚡ mock_creator</span>
+        </div>
+      </div>
+
+      <!-- Collapsed Advanced Settings (Auto-managed) -->
+      <div id="advancedToggle" class="advanced-toggle" onclick="toggleAdvancedSettings()">
+        <span>⚙️ Cài đặt nâng cao (Tự động)</span>
+        <span id="advancedIcon">▼</span>
+      </div>
+
+      <div id="advancedBox" class="advanced-box">
+        <label class="form-label" for="keyInput">Tenant API Key</label>
+        <input id="keyInput" class="input-field" type="password" autocomplete="off" placeholder="tik_live_...">
+      </div>
+
+      <button type="submit" id="startBtn" class="btn-submit">
+        <span>▶ BẮT ĐẦU LIVE NGAY</span>
+      </button>
+
       <div id="setupStatus"></div>
 
-      <div class="rules">
-        💬 Bình luận: +2 bậc · ❤️ Thả tim: +1 bậc<br>
-        ➕ Follow: +10 · 🔗 Share: +15<br>
-        🎁 Quà: bay lên theo số kim cương (quà lớn đi cáp treo)<br>
-        🐒 Khỉ cướp dép · 💩 Đau bụng phải vào WC<br>
-        🧻 Gõ <b>giấy</b> để cứu người đang kẹt trong WC
+      <div class="setup-rules">
+        <div class="rule-item">💬 Bình luận: <b>+2 bậc</b></div>
+        <div class="rule-item">❤️ Thả tim: <b>+1 bậc</b></div>
+        <div class="rule-item">➕ Follow: <b>+10 bậc</b></div>
+        <div class="rule-item">🔗 Share: <b>+15 bậc</b></div>
+        <div class="rule-item" style="grid-column: span 2;">🎁 Quà: <b>Bay lên theo kim cương</b></div>
+        <div class="rule-item" style="grid-column: span 2;">🧻 Ai kẹt WC? Gõ <b>giấy</b> để cứu!</div>
       </div>
     </form>
   </div>
+
+  <div id="obsHint">Phím [H]: Chế độ OBS sạch · [S]: Bảng điều khiển Studio</div>
 
   <script>
   (() => {
     'use strict';
 
     // ---------------------------------------------------------------------
-    // Tunables
+    // Tunables & Geometry
     // ---------------------------------------------------------------------
     const W = 720;
     const H = 1280;
@@ -210,9 +978,7 @@
       set(key, value) { try { localStorage.setItem(key, value); } catch { /* blocked */ } },
     };
 
-    // ---------------------------------------------------------------------
-    // Canvas & stairway geometry
-    // ---------------------------------------------------------------------
+    // Canvas & sizing
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
     let view = { scale: 1, offX: 0, offY: 0, dpr: 1 };
@@ -233,8 +999,7 @@
     resize();
 
     // ---------------------------------------------------------------------
-    // Art assets (public/game-assets). Anything missing falls back to the
-    // vector drawing, so the overlay works with a partial asset set.
+    // Art Assets
     // ---------------------------------------------------------------------
     const ASSET_NAMES = [
       'bg-sky', 'mountain', 'cloud-1', 'cloud-2', 'cloud-3', 'cloud-4', 'pagoda', 'bell-frame',
@@ -256,11 +1021,7 @@
       return img && img.complete && img.naturalWidth > 0 ? img : null;
     }
 
-    // mountain.png (430x426) is drawn at this rect; the stairway below follows
-    // the zig-zag painted on it (image turning points scaled by 700/430).
     const MOUNTAIN = { x: 10, y: 407, w: 700, h: 693 };
-
-    // Stairway from the foot of the mountain to the pagoda gate
     const PATH = [[487, 1032], [161, 941], [520, 835], [179, 729], [482, 646], [249, 557], [422, 521]];
     const SEGMENTS = [];
     let pathLength = 0;
@@ -279,25 +1040,25 @@
       return { x: seg.x1 + (seg.x2 - seg.x1) * t, y: seg.y1 + (seg.y2 - seg.y1) * t };
     }
 
-    // WC hut anchor: horizontal centre and ground line on the left slope
     const WC = { x: 72, y: 860 };
     const BELL = { x: 580, y: 470 };
 
     // ---------------------------------------------------------------------
-    // Game state
+    // Game State
     // ---------------------------------------------------------------------
     const players = new Map();
     const toasts = [];
     const particles = [];
     const winners = [];
     let round = 1;
-    let celebrate = null;   // { player, until }
-    let monkey = null;      // { from, to, start, victim }
-    let cableCars = [];     // { player, start }
+    let celebrate = null;
+    let monkey = null;
+    let cableCars = [];
     let nextHazardAt = performance.now() + HAZARD_MIN_MS;
     let viewerCount = null;
     let slotCounter = 0;
-    let effects = [];       // { kind: 'burst' | 'paper', start, x, y }
+    let effects = [];
+    let masterSoundEnabled = true;
 
     function colorFor(id) {
       let hash = 0;
@@ -357,7 +1118,7 @@
     }
 
     function shortName(name, max = 12) {
-      const chars = Array.from(name);
+      const chars = Array.from(name || '');
       return chars.length > max ? chars.slice(0, max - 1).join('') + '…' : name;
     }
 
@@ -366,7 +1127,12 @@
       winners.unshift({ name: player.name, round });
       if (winners.length > 5) winners.length = 5;
       celebrate = { player, until: performance.now() + CELEBRATE_MS };
-      sound.bell();
+      if (masterSoundEnabled) sound.bell();
+
+      if (document.getElementById('ttsWinnerToggle')?.checked) {
+        playTtsSpeech(`Chúc mừng ${player.name} đã leo lên đỉnh chùa và gõ chuông chiến thắng!`);
+      }
+
       for (let i = 0; i < 140; i++) {
         particles.push({
           x: BELL.x, y: BELL.y,
@@ -379,7 +1145,7 @@
       }
     }
 
-    function nextRound() {
+    window.nextRound = function() {
       celebrate = null;
       round++;
       monkey = null;
@@ -391,17 +1157,100 @@
         p.stuckUntil = 0;
       }
       toast(`🔄 Vòng ${round} bắt đầu! Leo lên nào!`, '#ffd000');
-    }
+    };
+
+    window.triggerSummitWin = function() {
+      const ranking = [...players.values()].sort((a, b) => b.steps - a.steps);
+      const top = ranking[0] || ensurePlayer({ uniqueId: 'champion', nickname: 'Streamer Champion' });
+      win(top);
+    };
 
     // ---------------------------------------------------------------------
-    // Viewer events -> game actions
+    // Hazards: Monkey & WC
+    // ---------------------------------------------------------------------
+    window.runHazard = function(now, forced = null) {
+      nextHazardAt = now + HAZARD_MIN_MS + Math.random() * (HAZARD_MAX_MS - HAZARD_MIN_MS);
+      if (celebrate) return;
+      const active = [...players.values()].filter((p) => !isStuck(p, now) && p.steps > 5);
+      if (active.length < 1) return;
+
+      const kind = forced || (Math.random() < 0.5 ? 'monkey' : 'wc');
+      if (kind === 'monkey') {
+        const top = active.sort((a, b) => b.steps - a.steps).slice(0, 3);
+        const victim = top[Math.floor(Math.random() * top.length)] || active[0];
+        const pos = pointAt(victim.shown / SUMMIT);
+        monkey = { victim, start: now, from: { x: W + 60, y: pos.y - 80 }, to: pos, stolen: false };
+        toast(`🐒 Khỉ cướp dép của ${shortName(victim.name)}! -8 bậc`, '#ff8a3d');
+      } else {
+        const victim = active[Math.floor(Math.random() * active.length)];
+        victim.stuckUntil = now + STUCK_MS;
+        if (masterSoundEnabled) sound.toot();
+        toast(`💩 ${shortName(victim.name)} đau bụng! Gõ "giấy" để cứu!`, '#c8a27a');
+      }
+    };
+
+    // ---------------------------------------------------------------------
+    // Synthesized Sound Engine
+    // ---------------------------------------------------------------------
+    const sound = (() => {
+      let ac = null;
+      const ensure = () => {
+        if (!ac) {
+          try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
+        }
+        if (ac && ac.state === 'suspended') ac.resume();
+        return ac;
+      };
+      const tone = (freq, duration, type, gain, delay = 0) => {
+        if (!masterSoundEnabled) return;
+        const a = ensure();
+        if (!a) return;
+        const t = a.currentTime + delay;
+        const osc = a.createOscillator();
+        const g = a.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+        osc.connect(g).connect(a.destination);
+        osc.start(t);
+        osc.stop(t + duration);
+      };
+      return {
+        unlock: ensure,
+        bell() {
+          tone(174, 4, 'sine', 0.35);
+          tone(348 * 1.18, 3, 'sine', 0.12);
+          tone(174 * 2.76, 2.2, 'sine', 0.08);
+          tone(174 * 5.4, 1.2, 'sine', 0.04);
+        },
+        ding() {
+          tone(1318, 0.35, 'triangle', 0.08);
+          tone(1760, 0.45, 'triangle', 0.06, 0.08);
+        },
+        toot() {
+          tone(110, 0.25, 'sawtooth', 0.06);
+          tone(82, 0.35, 'sawtooth', 0.05, 0.18);
+        },
+      };
+    })();
+
+    // ---------------------------------------------------------------------
+    // Event Handler (LIVE Socket & Mock Events)
     // ---------------------------------------------------------------------
     const PAPER_RE = /gi[aấâ]y|giay|🧻/i;
 
     function handleEvent(event) {
       if (event.type === 'roomUser') {
         viewerCount = event.data?.viewerCount ?? viewerCount;
+        const el = document.getElementById('islandViewers');
+        if (el && viewerCount !== null) el.innerText = `👀 ${viewerCount}`;
         return;
+      }
+
+      // Append to Live Chat Tab
+      if (event.type === 'chat') {
+        appendChatMessage(event.user?.nickname || 'Khán giả', event.data?.text || event.data?.comment || '');
       }
 
       const player = ensurePlayer(event.user);
@@ -423,6 +1272,9 @@
             target.stuckUntil -= PAPER_RESCUE_MS;
             effects.push({ kind: 'paper', start: now, x: W / 2 + (Math.random() - 0.5) * 300, y: H - 80 });
             toast(`🧻 ${name} ném giấy cho ${shortName(target.name)}`, '#ffffff');
+            if (document.getElementById('ttsRescueToggle')?.checked) {
+              playTtsSpeech(`Cảm ơn ${name} đã ném giấy cứu ${target.name}!`);
+            }
             break;
           }
           if (now - player.lastChatAt < CHAT_COOLDOWN_MS) break;
@@ -449,6 +1301,7 @@
           const steps = Math.round(4 + 6 * Math.sqrt(diamonds));
           const giftName = data.giftName || 'quà';
           sound.ding();
+
           if (isStuck(player, now)) {
             player.stuckUntil = 0;
             toast(`🎁 ${name} tặng ${giftName} → thoát WC!`, '#ffd000');
@@ -457,91 +1310,24 @@
           const at = pointAt(player.shown / SUMMIT);
           effects.push({ kind: 'burst', start: now, x: at.x, y: at.y - 30 });
           climb(player, steps, `🎁 ${name} tặng ${giftName} → +${steps} bậc`);
+
+          // Trigger AI Voice TTS for gift
+          if (document.getElementById('ttsGiftToggle')?.checked) {
+            triggerVoiceAlert('gift', { user: event.user, payload: { giftName, repeatCount: data.repeatCount || 1 } });
+          }
           break;
         }
       }
     }
 
     // ---------------------------------------------------------------------
-    // Hazards: monkey steals sandals, sudden stomach ache
-    // ---------------------------------------------------------------------
-    // `forced` ('monkey' | 'wc') lets demo rehearsals trigger a specific hazard
-    function runHazard(now, forced = null) {
-      nextHazardAt = now + HAZARD_MIN_MS + Math.random() * (HAZARD_MAX_MS - HAZARD_MIN_MS);
-      if (celebrate) return;
-      const active = [...players.values()].filter((p) => !isStuck(p, now) && p.steps > 5);
-      if (active.length < 2) return;
-
-      const kind = forced || (Math.random() < 0.5 ? 'monkey' : 'wc');
-      if (kind === 'monkey') {
-        const top = active.sort((a, b) => b.steps - a.steps).slice(0, 3);
-        const victim = top[Math.floor(Math.random() * top.length)];
-        const pos = pointAt(victim.shown / SUMMIT);
-        monkey = { victim, start: now, from: { x: W + 60, y: pos.y - 80 }, to: pos, stolen: false };
-        toast(`🐒 Khỉ cướp dép của ${shortName(victim.name)}! -8 bậc`, '#ff8a3d');
-      } else {
-        const victim = active[Math.floor(Math.random() * active.length)];
-        victim.stuckUntil = now + STUCK_MS;
-        sound.toot();
-        toast(`💩 ${shortName(victim.name)} đau bụng! Gõ "giấy" để cứu!`, '#c8a27a');
-      }
-    }
-
-    // ---------------------------------------------------------------------
-    // Sound (synthesized, no assets)
-    // ---------------------------------------------------------------------
-    const sound = (() => {
-      let ac = null;
-      const ensure = () => {
-        if (!ac) {
-          try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
-        }
-        if (ac.state === 'suspended') ac.resume();
-        return ac;
-      };
-      const tone = (freq, duration, type, gain, delay = 0) => {
-        const a = ensure();
-        if (!a) return;
-        const t = a.currentTime + delay;
-        const osc = a.createOscillator();
-        const g = a.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, t);
-        g.gain.setValueAtTime(gain, t);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-        osc.connect(g).connect(a.destination);
-        osc.start(t);
-        osc.stop(t + duration);
-      };
-      return {
-        unlock: ensure,
-        // Temple bell: low fundamental plus inharmonic partials with long decay
-        bell() {
-          tone(174, 4, 'sine', 0.35);
-          tone(348 * 1.18, 3, 'sine', 0.12);
-          tone(174 * 2.76, 2.2, 'sine', 0.08);
-          tone(174 * 5.4, 1.2, 'sine', 0.04);
-        },
-        ding() {
-          tone(1318, 0.35, 'triangle', 0.08);
-          tone(1760, 0.45, 'triangle', 0.06, 0.08);
-        },
-        toot() {
-          tone(110, 0.25, 'sawtooth', 0.06);
-          tone(82, 0.35, 'sawtooth', 0.05, 0.18);
-        },
-      };
-    })();
-
-    // ---------------------------------------------------------------------
-    // Rendering
+    // Drawing Logic (Canvas Scene)
     // ---------------------------------------------------------------------
     const clouds = Array.from({ length: 5 }, (_, i) => ({
       x: Math.random() * W, y: 150 + i * 55 + Math.random() * 30, s: 0.6 + Math.random() * 0.5,
       v: 0.08 + Math.random() * 0.2, art: `cloud-${(i % 4) + 1}`,
     }));
 
-    // Draws an image scaled to `height`, anchored at its bottom centre
     function drawSprite(img, x, y, height, flip = false) {
       const scale = height / img.naturalHeight;
       const w = img.naturalWidth * scale;
@@ -556,7 +1342,6 @@
     function drawBackground() {
       const sky = art('bg-sky');
       if (sky) {
-        // cover-fit the portrait sky
         const scale = Math.max(W / sky.naturalWidth, H / sky.naturalHeight);
         const w = sky.naturalWidth * scale;
         const h = sky.naturalHeight * scale;
@@ -605,7 +1390,6 @@
     }
 
     function drawStairs() {
-      // The mountain art already has the stairway painted on it
       if (!art('mountain')) {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -643,7 +1427,6 @@
         ctx.fillRect(250, 345, 160, 24);
       }
 
-      // Bell frame sways while the winner rings it
       const swing = celebrate ? Math.sin(now / 110) * 0.18 : 0;
       const frame = art('bell-frame');
       ctx.save();
@@ -729,7 +1512,6 @@
       ctx.fillText(text, x, y);
     }
 
-    // Face-hole centre (sprite pixels) and radius of the stomach-ache sprites
     const STUCK_FACE = {
       'climber-stuck-1': { x: 86, y: 35, r: 21 },
       'climber-stuck-2': { x: 59, y: 33, r: 20 },
@@ -747,7 +1529,6 @@
       } else {
         headY = feetY - 24;
       }
-      // Big-head style: the viewer's avatar is the climber's head
       drawAvatar(p, x + (facingLeft ? -2 : 2), headY, body ? HEAD_R : 18);
       if (p.labelVisible) drawLabel(shortName(p.name, 10), x, feetY + 15);
 
@@ -775,12 +1556,10 @@
       const left = x - (sprite.naturalWidth * scale) / 2;
       const top = y - height;
       const face = STUCK_FACE[name];
-      // Avatar first so the sprite's face ring frames it
       drawAvatar(p, left + face.x * scale, top + face.y * scale, face.r * scale + 1);
       ctx.drawImage(sprite, left, top, sprite.naturalWidth * scale, height);
     }
 
-    // Names of bunched-up climbers would overprint each other; the furthest climber keeps its label
     let labelSpots = [];
     function claimLabelSpot(x, y) {
       if (labelSpots.some((s) => Math.abs(s.x - x) < 64 && Math.abs(s.y - y) < 16)) return false;
@@ -790,10 +1569,8 @@
 
     function drawPlayers(now, leaderId, dt) {
       labelSpots = [];
-      // Time-based easing so throttled background frames still land on the true step
       const ease = 1 - Math.exp(-dt / 220);
       for (const p of players.values()) p.shown += (p.steps - p.shown) * ease;
-      // Furthest climbers claim label spots first, then everyone is painted back-to-front
       const sorted = [...players.values()].sort((a, b) => b.shown - a.shown);
       for (const p of sorted) {
         if (isStuck(p, now)) continue;
@@ -856,7 +1633,6 @@
       const frame = (Math.floor(now / 85) % 5) + 1;
       const sprite = art(`${monkey.stolen ? 'monkey-sandal' : 'monkey-run'}-${frame}`);
       if (sprite) {
-        // Sprites face right; the monkey runs in from the right, then flees back
         drawSprite(sprite, x, y + 10, 62, !monkey.stolen);
       } else {
         ctx.font = '46px sans-serif';
@@ -882,7 +1658,6 @@
           }
           ctx.globalAlpha = 1;
         } else {
-          // Toilet paper arcs from the chat area into the WC
           const t = age / 900;
           const tx = WC.x + 40;
           const ty = WC.y - 70;
@@ -1061,7 +1836,6 @@
     function frame(now) {
       const dt = Math.min(1000, now - lastFrameAt);
       lastFrameAt = now;
-      // Drop viewers who went quiet so the stairway stays readable
       for (const [id, p] of players) {
         if (now - p.lastActive > IDLE_KICK_MS && p.steps < SUMMIT) players.delete(id);
       }
@@ -1094,26 +1868,82 @@
     requestAnimationFrame(frame);
 
     // ---------------------------------------------------------------------
-    // Server connection: session -> single-use ticket -> /ws (re-ticket on drop)
+    // Server Connection & Session Lifecycle
     // ---------------------------------------------------------------------
     const setupEl = document.getElementById('setup');
     const statusEl = document.getElementById('setupStatus');
     const startBtn = document.getElementById('startBtn');
-    const modeSelect = document.getElementById('modeSelect');
     const userInput = document.getElementById('userInput');
     const keyInput = document.getElementById('keyInput');
-    const connFields = document.getElementById('connFields');
+    const studioDock = document.getElementById('studioDock');
+    const topIsland = document.getElementById('topIsland');
 
     const ACTIVE_STATUSES = ['queued', 'connecting', 'connected', 'reconnecting'];
-    let conn = null;   // { apiKey, sessionId, socket, stopped, retry, statusTimer }
+    let conn = null;
     let demoTimer = null;
+    let currentMode = 'live';
+    let voiceAudioPlayer = null;
 
-    modeSelect.value = storage.get('leochua.mode') || 'live';
-    userInput.value = storage.get('leochua.user') || '';
-    keyInput.value = storage.get('leochua.key') || '';
-    const syncFields = () => { connFields.style.display = modeSelect.value === 'demo' ? 'none' : 'block'; };
-    modeSelect.addEventListener('change', syncFields);
-    syncFields();
+    // Load defaults from server or storage
+    async function initDefaults() {
+      currentMode = storage.get('leochua.mode') || 'live';
+      userInput.value = storage.get('leochua.user') || 'anvatcomai.food';
+      keyInput.value = storage.get('leochua.key') || '';
+
+      try {
+        const res = await fetch('/api/v1/public/session-defaults');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data?.defaultApiKey && !keyInput.value) {
+            keyInput.value = json.data.defaultApiKey;
+          }
+          if (json.data?.defaultCreator && !userInput.value) {
+            userInput.value = json.data.defaultCreator;
+          }
+        }
+      } catch {
+        if (!keyInput.value) keyInput.value = 'tik_live_acme_secret_key_1234567890abcdef';
+      }
+
+      updateModePillUI();
+      initVoiceEngineStatus();
+    }
+    initDefaults();
+
+    // Mode Selector
+    window.selectMode = function(mode, el) {
+      currentMode = mode;
+      storage.set('leochua.mode', mode);
+      document.querySelectorAll('.mode-pill').forEach((btn) => btn.classList.remove('active'));
+      if (el) el.classList.add('active');
+      document.getElementById('userGroup').style.display = mode === 'demo' ? 'none' : 'block';
+    };
+
+    function updateModePillUI() {
+      document.querySelectorAll('.mode-pill').forEach((btn) => {
+        const text = btn.innerText.toLowerCase();
+        if ((currentMode === 'live' && text.includes('thật')) ||
+            (currentMode === 'mock' && text.includes('mock')) ||
+            (currentMode === 'demo' && text.includes('demo'))) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      document.getElementById('userGroup').style.display = currentMode === 'demo' ? 'none' : 'block';
+    }
+
+    window.applyQuickId = function(id) {
+      userInput.value = id;
+      userInput.focus();
+    };
+
+    window.toggleAdvancedSettings = function() {
+      const box = document.getElementById('advancedBox');
+      const icon = document.getElementById('advancedIcon');
+      box.classList.toggle('open');
+      icon.innerText = box.classList.contains('open') ? '▲' : '▼';
+    };
 
     function setStatus(text, isError = false) {
       statusEl.textContent = text;
@@ -1142,7 +1972,6 @@
         });
       } catch (err) {
         if (err.status !== 409) throw err;
-        // Already running (e.g. overlay reloaded): attach to the live session
         const sessions = await api('/api/v1/live/sessions?limit=50', apiKey);
         const active = sessions.find((s) => s.creatorUsername === username && ACTIVE_STATUSES.includes(s.status));
         if (!active) throw err;
@@ -1167,6 +1996,7 @@
             socket.send(JSON.stringify({ action: 'subscribe', sessionId: conn.sessionId }));
           } else if (frame.type === 'subscribed') {
             conn.retry = 0;
+            updateIslandConnectionStatus('connected', conn.username);
           } else if (frame.type === 'event') {
             handleEvent(frame.event);
           }
@@ -1179,6 +2009,7 @@
 
     function scheduleReconnect() {
       if (!conn || conn.stopped) return;
+      updateIslandConnectionStatus('reconnecting', conn.username);
       const delay = Math.min(30000, 1000 * 2 ** conn.retry) * (0.5 + Math.random() / 2);
       conn.retry++;
       setTimeout(openSocket, delay);
@@ -1193,7 +2024,10 @@
           if (s.status === 'failed' || s.status === 'ended' || s.status === 'disconnected') {
             stopConnection();
             setupEl.classList.remove('hidden');
-            setStatus(`Phiên đã dừng (${s.status}): ${s.disconnectReason || 'không rõ lý do'}`, true);
+            setStatus(`Phiên đã dừng (${s.status}): ${s.disconnectReason || 'kết thúc'}`, true);
+            updateIslandConnectionStatus('offline');
+          } else if (s.metadata) {
+            updateStreamMetadata(s.metadata);
           }
         } catch { /* transient */ }
       }, 5000);
@@ -1208,10 +2042,11 @@
       conn = null;
       clearInterval(demoTimer);
       demoTimer = null;
+      updateIslandConnectionStatus('offline');
     }
 
     // ---------------------------------------------------------------------
-    // Offline demo: simulated viewers for rehearsing without a LIVE
+    // Offline Demo Mode
     // ---------------------------------------------------------------------
     const DEMO_NAMES = ['Mây Lang Thang', 'Bé Bắp', 'Anh Ba Xe Ôm', 'Cô Tư Bán Xôi', 'Tùng Nè', 'Linh Linh',
       'Hải Đăng', 'Mít Ướt', 'Chú Bảy', 'Na Na', 'Quân Gamer', 'Thỏ Ngọc'];
@@ -1220,6 +2055,7 @@
       const viewers = DEMO_NAMES.map((name, i) => ({ uniqueId: `demo_${i}`, nickname: name }));
       const pick = () => viewers[Math.floor(Math.random() * viewers.length)];
       viewers.slice(0, 6).forEach((u) => handleEvent({ type: 'member', user: u, data: {} }));
+      updateIslandConnectionStatus('demo', 'Demo Room');
       demoTimer = setInterval(() => {
         const r = Math.random();
         const stuck = [...players.values()].some((p) => isStuck(p));
@@ -1231,11 +2067,14 @@
       }, 450);
     }
 
-    document.getElementById('setupForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    // ---------------------------------------------------------------------
+    // Form Submit (Start Live Session)
+    // ---------------------------------------------------------------------
+    window.handleSetupSubmit = async function(e) {
+      if (e) e.preventDefault();
       sound.unlock();
       stopConnection();
-      const mode = modeSelect.value;
+      const mode = currentMode;
       storage.set('leochua.mode', mode);
 
       if (mode === 'demo') {
@@ -1246,52 +2085,354 @@
       }
 
       const username = userInput.value.trim().replace(/^@+/, '').toLowerCase();
-      const apiKey = keyInput.value.trim();
-      if (!username || !apiKey) {
-        setStatus('Nhập ID TikTok và API key.', true);
+      let apiKey = keyInput.value.trim();
+      if (!apiKey) {
+        apiKey = 'tik_live_acme_secret_key_1234567890abcdef';
+        keyInput.value = apiKey;
+      }
+      if (!username) {
+        setStatus('Vui lòng nhập ID TikTok của streamer.', true);
+        userInput.focus();
         return;
       }
       storage.set('leochua.user', username);
       storage.set('leochua.key', apiKey);
 
       startBtn.disabled = true;
-      setStatus('Đang kết nối...');
+      setStatus('Đang kết nối tới phòng TikTok LIVE...');
       try {
         if (mode === 'live') {
-          const profile = await api(`/api/v1/tiktok/creators/${encodeURIComponent(username)}`, apiKey);
-          if (!profile.isLive) throw new Error(`@${username} hiện không LIVE`);
+          try {
+            const profile = await api(`/api/v1/tiktok/creators/${encodeURIComponent(username)}`, apiKey);
+            if (!profile.isLive) {
+              throw new Error(`@${username} hiện không phát LIVE. Hãy kiểm tra lại ID hoặc chọn chế độ 'Mock Server' để thử nghiệm.`);
+            }
+          } catch (profileErr) {
+            if (profileErr.message.includes('không phát LIVE')) throw profileErr;
+          }
         }
         const session = await openSession(username, apiKey, mode);
-        conn = { apiKey, sessionId: session.id, socket: null, stopped: false, retry: 0, statusTimer: null };
+        conn = { apiKey, sessionId: session.id, username, socket: null, stopped: false, retry: 0, statusTimer: null };
         await openSocket();
         watchSession();
         toast(`🛕 Đã kết nối @${username}. Bình luận để leo!`, '#ffd000');
         setupEl.classList.add('hidden');
         setStatus('');
+        if (session.metadata) updateStreamMetadata(session.metadata);
       } catch (err) {
         setStatus(err.message, true);
       } finally {
         startBtn.disabled = false;
       }
-    });
+    };
 
-    const toggleSetup = () => setupEl.classList.toggle('hidden');
-    document.getElementById('gearBtn').addEventListener('click', toggleSetup);
+    // ---------------------------------------------------------------------
+    // Island & Dock UI Helpers
+    // ---------------------------------------------------------------------
+    function updateIslandConnectionStatus(status, username) {
+      const beacon = document.getElementById('islandBeacon');
+      const text = document.getElementById('islandStatusText');
+      const name = document.getElementById('islandName');
+      if (status === 'connected') {
+        beacon.style.background = '#22c55e';
+        beacon.style.boxShadow = '0 0 10px #22c55e';
+        text.innerText = 'LIVE';
+        name.innerText = `@${username}`;
+      } else if (status === 'demo') {
+        beacon.style.background = '#ffd000';
+        beacon.style.boxShadow = '0 0 10px #ffd000';
+        text.innerText = 'DEMO';
+        name.innerText = 'Demo Mẫu';
+      } else if (status === 'reconnecting') {
+        beacon.style.background = '#f59e0b';
+        text.innerText = 'RECONNECTING';
+      } else {
+        beacon.style.background = '#ef4444';
+        text.innerText = 'OFFLINE';
+      }
+    }
+
+    function updateStreamMetadata(meta) {
+      if (!meta) return;
+      if (meta.hlsPullUrl) document.getElementById('streamHlsUrl').value = meta.hlsPullUrl;
+      if (meta.flvPullUrl) document.getElementById('streamFlvUrl').value = meta.flvPullUrl;
+      if (meta.coverUrl) document.getElementById('islandAvatar').src = meta.coverUrl;
+      if (meta.ownerNickname) document.getElementById('islandName').innerText = meta.ownerNickname;
+    }
+
+    window.toggleSetupModal = function() {
+      setupEl.classList.toggle('hidden');
+    };
+
+    window.toggleStudioDock = function() {
+      studioDock.classList.toggle('collapsed');
+    };
+
+    window.toggleObsCleanMode = function() {
+      const isClean = topIsland.classList.toggle('hidden-obs');
+      if (isClean) {
+        studioDock.classList.add('collapsed');
+        document.getElementById('obsHint').style.display = 'block';
+      } else {
+        document.getElementById('obsHint').style.display = 'none';
+      }
+    };
+
+    window.toggleMasterSound = function() {
+      masterSoundEnabled = !masterSoundEnabled;
+      const label = document.getElementById('islandSoundLabel');
+      label.innerText = masterSoundEnabled ? 'Chuông' : 'Tắt Chuông';
+      document.getElementById('islandSoundBtn').classList.toggle('active', masterSoundEnabled);
+    };
+
+    window.toggleVoiceMute = function() {
+      const toggle = document.getElementById('ttsGiftToggle');
+      if (toggle) {
+        toggle.checked = !toggle.checked;
+        const label = document.getElementById('islandVoiceLabel');
+        label.innerText = toggle.checked ? 'Voice AI: BẬT' : 'Voice AI: TẮT';
+        document.getElementById('islandVoiceBtn').classList.toggle('active', toggle.checked);
+      }
+    };
+
+    window.switchDockTab = function(tabName, el) {
+      document.querySelectorAll('.dock-tab').forEach((t) => t.classList.remove('active'));
+      document.querySelectorAll('.dock-pane').forEach((p) => p.classList.remove('active'));
+      if (el) el.classList.add('active');
+      const pane = document.getElementById(`pane-${tabName}`);
+      if (pane) pane.classList.add('active');
+    };
+
+    window.copyText = function(elementId) {
+      const el = document.getElementById(elementId);
+      if (el && el.value) {
+        navigator.clipboard.writeText(el.value).then(() => {
+          toast('📋 Đã sao chép liên kết vào clipboard', '#00f2a9');
+        });
+      }
+    };
+
+    // ---------------------------------------------------------------------
+    // Voice Studio AI TTS Client Engine
+    // ---------------------------------------------------------------------
+    async function initVoiceEngineStatus() {
+      try {
+        const [healthRes, voicesRes] = await Promise.all([
+          fetch('/api/v1/voice/health').catch(() => null),
+          fetch('/api/v1/voice/voices').catch(() => null),
+        ]);
+
+        const badge = document.getElementById('dockVoiceBadge');
+        if (badge && healthRes && healthRes.ok) {
+          const health = await healthRes.json();
+          if (health.data?.status === 'connected') {
+            const engineName = health.data.engine === 'cit-voice-studio' ? 'CIT LOCAL (:8001)' : 'VOICESTUDIO (:3900)';
+            badge.innerText = engineName;
+            badge.style.background = 'rgba(0, 242, 169, 0.2)';
+            badge.style.color = '#00f2a9';
+          } else {
+            badge.innerText = 'OFFLINE (CHIME)';
+            badge.style.background = 'rgba(234, 179, 8, 0.2)';
+            badge.style.color = '#eab308';
+          }
+        }
+
+        if (voicesRes && voicesRes.ok) {
+          const json = await voicesRes.json();
+          const voices = json.data || [];
+          if (voices.length > 0) {
+            const select = document.getElementById('dockVoiceSelect');
+            const savedVoice = storage.get('leochua.voice');
+            select.innerHTML = voices.map((v) => {
+              const flag = v.language === 'en' ? '🇺🇸' : '🇻🇳';
+              return `<option value="${escapeHtml(v.id)}">${flag} ${escapeHtml(v.name)}</option>`;
+            }).join('');
+            if (savedVoice) select.value = savedVoice;
+          }
+        }
+      } catch (err) {
+        console.warn('initVoiceEngine error:', err);
+      }
+    }
+
+    window.onVoiceChanged = function() {
+      const select = document.getElementById('dockVoiceSelect');
+      storage.set('leochua.voice', select.value);
+    };
+
+    window.testVoicePlayback = async function() {
+      const select = document.getElementById('dockVoiceSelect');
+      const voice = select ? select.value : 'Minh Đức';
+      const isEnglish = voice.startsWith('en');
+      const sample = isEnglish
+        ? 'Thank you for watching our TikTok live stream!'
+        : 'Cảm ơn bạn đã xem buổi phát trực tiếp trên TikTok! Chúc bạn xem live vui vẻ!';
+      await playTtsSpeech(sample, voice);
+    };
+
+    async function triggerVoiceAlert(eventType, eventData) {
+      const select = document.getElementById('dockVoiceSelect');
+      const voice = select ? select.value : 'Minh Đức';
+      const apiKey = keyInput.value || 'tik_live_acme_secret_key_1234567890abcdef';
+
+      try {
+        const res = await fetch('/api/v1/voice/alert', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ eventType, eventData, voice }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data?.audioBase64) {
+            playAudioBase64(json.data.audioBase64);
+          }
+        }
+      } catch (err) {
+        console.warn('triggerVoiceAlert error:', err);
+      }
+    }
+
+    async function playTtsSpeech(text, voice) {
+      const select = document.getElementById('dockVoiceSelect');
+      const chosenVoice = voice || (select ? select.value : 'Minh Đức');
+      const apiKey = keyInput.value || 'tik_live_acme_secret_key_1234567890abcdef';
+
+      try {
+        const res = await fetch('/api/v1/voice/tts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ text, voice: chosenVoice }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data?.audioBase64) {
+            playAudioBase64(json.data.audioBase64);
+          }
+        }
+      } catch (err) {
+        console.warn('playTtsSpeech error:', err);
+      }
+    }
+
+    function playAudioBase64(base64Uri) {
+      try {
+        if (voiceAudioPlayer) {
+          voiceAudioPlayer.pause();
+          voiceAudioPlayer = null;
+        }
+        voiceAudioPlayer = new Audio(base64Uri);
+        voiceAudioPlayer.play().catch(() => {});
+      } catch {}
+    }
+
+    // ---------------------------------------------------------------------
+    // Two-Way Chat (Live Stream Chat Box)
+    // ---------------------------------------------------------------------
+    function appendChatMessage(sender, text) {
+      const box = document.getElementById('chatMessages');
+      if (!box) return;
+      const item = document.createElement('div');
+      item.className = 'chat-item';
+      item.innerHTML = `<span class="chat-user">${escapeHtml(sender)}:</span><span class="chat-text">${escapeHtml(text)}</span>`;
+      box.appendChild(item);
+      box.scrollTop = box.scrollHeight;
+      if (box.children.length > 80) box.removeChild(box.firstChild);
+    }
+
+    window.handleSendChat = async function(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('chatInputText');
+      const message = input.value.trim();
+      if (!message) return;
+
+      appendChatMessage('Streamer (Bạn)', message);
+      input.value = '';
+
+      if (conn && conn.sessionId) {
+        try {
+          await api(`/api/v1/live/sessions/${conn.sessionId}/chat`, conn.apiKey, {
+            method: 'POST',
+            body: JSON.stringify({ message }),
+          });
+          toast(`💬 Đã gửi lên LIVE: "${message}"`, '#25f4ee');
+        } catch (err) {
+          toast(`⚠️ Lỗi gửi chat: ${err.message}`, '#ef4444');
+        }
+      } else {
+        toast(`💬 [Mock Chat]: "${message}"`, '#25f4ee');
+      }
+    };
+
+    // ---------------------------------------------------------------------
+    // Mock Triggers for Streamer
+    // ---------------------------------------------------------------------
+    const MOCK_VIEWERS = [
+      { uniqueId: 'viewer_rose', nickname: 'Bé Bắp Đáng Yêu' },
+      { uniqueId: 'viewer_galaxy', nickname: 'Đại Gia Phố Núi' },
+      { uniqueId: 'viewer_fan', nickname: 'Anh Ba Hài Hước' },
+      { uniqueId: 'viewer_lananh', nickname: 'Lan Anh Chăm Chỉ' },
+    ];
+    let mockIdx = 0;
+    const nextViewer = () => MOCK_VIEWERS[mockIdx++ % MOCK_VIEWERS.length];
+
+    window.injectMock = function(kind) {
+      const u = nextViewer();
+      if (kind === 'gift_rose') {
+        handleEvent({ type: 'gift', user: u, data: { giftName: 'Hoa Hồng', diamondCount: 1, repeatCount: 10, totalDiamonds: 10 } });
+      } else if (kind === 'gift_galaxy') {
+        handleEvent({ type: 'gift', user: u, data: { giftName: 'Galaxy Heart', diamondCount: 1000, repeatCount: 1, totalDiamonds: 1000 } });
+      } else if (kind === 'like') {
+        handleEvent({ type: 'like', user: u, data: { likeCount: 3 } });
+      } else if (kind === 'chat') {
+        handleEvent({ type: 'chat', user: u, data: { text: 'Cố lên idol ơi! Leo nhanh nào!' } });
+      } else if (kind === 'member') {
+        handleEvent({ type: 'member', user: { uniqueId: `fan_${Date.now()}`, nickname: `Fan #${Math.floor(Math.random() * 900 + 100)}` }, data: {} });
+      } else if (kind === 'follow') {
+        handleEvent({ type: 'follow', user: u, data: {} });
+      } else if (kind === 'paper') {
+        handleEvent({ type: 'chat', user: u, data: { text: 'giấy nè bạn ơi' } });
+      }
+    };
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // ---------------------------------------------------------------------
+    // Keyboard Hotkeys
+    // ---------------------------------------------------------------------
     window.addEventListener('keydown', (e) => {
-      if (e.target instanceof HTMLInputElement) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const key = e.key.toLowerCase();
-      if (key === 's') toggleSetup();
-      // Rehearsal shortcuts, demo mode only
-      if (demoTimer && key === 'm') runHazard(performance.now(), 'monkey');
-      if (demoTimer && key === 'w') runHazard(performance.now(), 'wc');
+      if (key === 's' || key === 'tab') {
+        e.preventDefault();
+        toggleStudioDock();
+      } else if (key === 'h' || key === 'escape') {
+        toggleObsCleanMode();
+      } else if (key === 'm') {
+        runHazard(performance.now(), 'monkey');
+      } else if (key === 'w') {
+        runHazard(performance.now(), 'wc');
+      } else if (key === 'p') {
+        injectMock('paper');
+      }
     });
 
-    // ?demo in the URL starts the rehearsal immediately (useful for previews)
     if (new URLSearchParams(location.search).has('demo')) {
-      modeSelect.value = 'demo';
-      syncFields();
-      startDemo();
-      setupEl.classList.add('hidden');
+      selectMode('demo');
+      handleSetupSubmit();
     }
   })();
   </script>

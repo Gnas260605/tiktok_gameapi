@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run tests/unit",
+    "test:game": "vitest run tests/game",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "vitest run tests/e2e",
     "typecheck": "tsc --noEmit",

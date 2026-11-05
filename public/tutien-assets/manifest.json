@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "realms": {
+    "luyen-khi": {
+      "name": "Luyện Khí",
+      "order": 1,
+      "male": {
+        "file": "char-luyen-khi-male.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "female": {
+        "file": "char-luyen-khi-female.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "aura": "aura-luyen-khi.png",
+      "orb": {
+        "file": "orb-luyen-khi.png",
+        "hand": [0.78, 0.30]
+      },
+      "color": "#7FD3FF"
+    },
+    "truc-co": {
+      "name": "Trúc Cơ",
+      "order": 2,
+      "male": {
+        "file": "char-truc-co-male.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "female": {
+        "file": "char-truc-co-female.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "aura": "aura-truc-co.png",
+      "orb": {
+        "file": "orb-truc-co.png",
+        "hand": [0.78, 0.30]
+      },
+      "color": "#50E3C2"
+    },
+    "kim-dan": {
+      "name": "Kim Đan",
+      "order": 3,
+      "male": {
+        "file": "char-kim-dan-male.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "female": {
+        "file": "char-kim-dan-female.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "aura": "aura-kim-dan.png",
+      "orb": {
+        "file": "orb-kim-dan.png",
+        "hand": [0.78, 0.30]
+      },
+      "color": "#F5A623"
+    },
+    "nguyen-anh": {
+      "name": "Nguyên Anh",
+      "order": 4,
+      "male": {
+        "file": "char-nguyen-anh-male.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "female": {
+        "file": "char-nguyen-anh-female.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "aura": "aura-nguyen-anh.png",
+      "orb": {
+        "file": "orb-nguyen-anh.png",
+        "hand": [0.78, 0.30]
+      },
+      "color": "#BD10E0"
+    },
+    "hoa-than": {
+      "name": "Hóa Thần",
+      "order": 5,
+      "male": {
+        "file": "char-hoa-than-male.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "female": {
+        "file": "char-hoa-than-female.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "aura": "aura-hoa-than.png",
+      "orb": {
+        "file": "orb-hoa-than.png",
+        "hand": [0.78, 0.30]
+      },
+      "color": "#4A90E2"
+    },
+    "luyen-hu": {
+      "name": "Luyện Hư",
+      "order": 6,
+      "male": {
+        "file": "char-luyen-hu-male.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "female": {
+        "file": "char-luyen-hu-female.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "aura": "aura-luyen-hu.png",
+      "orb": {
+        "file": "orb-luyen-hu.png",
+        "hand": [0.78, 0.30]
+      },
+      "color": "#9013FE"
+    },
+    "hop-the": {
+      "name": "Hợp Thể",
+      "order": 7,
+      "male": {
+        "file": "char-hop-the-male.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "female": {
+        "file": "char-hop-the-female.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "aura": "aura-hop-the.png",
+      "orb": {
+        "file": "orb-hop-the.png",
+        "hand": [0.78, 0.30]
+      },
+      "color": "#D0021B"
+    },
+    "dai-thua": {
+      "name": "Đại Thừa",
+      "order": 8,
+      "male": {
+        "file": "char-dai-thua-male.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "female": {
+        "file": "char-dai-thua-female.png",
+        "anchor": [0.5, 1.0],
+        "chest": [0.5, 0.38]
+      },
+      "aura": "aura-dai-thua.png",
+      "orb": {
+        "file": "orb-dai-thua.png",
+        "hand": [0.78, 0.30]
+      },
+      "color": "#F8E71C"
+    }
+  },
+  "effects": {
+    "giftBurst": "fx-gift-burst.png",
+    "levelupRing": "fx-levelup-ring.png",
+    "tribulationCloud": "fx-tribulation-cloud.png",
+    "lightning": [
+      "fx-lightning-1.png",
+      "fx-lightning-2.png",
+      "fx-lightning-3.png",
+      "fx-lightning-4.png"
+    ],
+    "breakthroughPillar": "fx-breakthrough-pillar.png",
+    "failCrack": "fx-fail-crack.png"
+  },
+  "ui": {
+    "expBar": "ui-exp-bar.png",
+    "ranks": [
+      "ui-rank-1.png",
+      "ui-rank-2.png",
+      "ui-rank-3.png"
+    ]
+  },
+  "fallback": {
+    "femaleMissing": "use-male-with-ruby-frame",
+    "bothMissing": "vector-silhouette-with-realm-color"
+  }
+}

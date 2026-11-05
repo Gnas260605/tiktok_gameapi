@@ -75,12 +75,21 @@ export class LiveTikTokConnector extends BaseConnector {
       }
 
       const upstreamRoom = state?.roomInfo?.data ?? state?.roomInfo ?? {};
+      const streamUrl = upstreamRoom.stream_url ?? upstreamRoom.streamUrl ?? {};
+      const cover = upstreamRoom.cover ?? {};
+      const owner = upstreamRoom.owner ?? {};
+
       this.roomInfo = {
         roomId: String(state?.roomId || this.liveConnection.roomId || uuidv4()),
         creatorUsername: this.creatorUsername,
         title: upstreamRoom.title || null,
         viewerCount: upstreamRoom.user_count || 0,
         startedAt: new Date(),
+        hlsPullUrl: streamUrl.hls_pull_url ?? streamUrl.hlsPullUrl ?? null,
+        flvPullUrl: streamUrl.flv_pull_url ?? streamUrl.flvPullUrl ?? null,
+        coverUrl: cover.url_list?.[0] ?? cover.urlList?.[0] ?? null,
+        ownerNickname: owner.nickname || null,
+        ownerBio: owner.bio_description || null,
       };
 
       this.transitionTo('connected');
@@ -104,6 +113,25 @@ export class LiveTikTokConnector extends BaseConnector {
     this.transitionTo('disconnected', reason);
   }
 
+  public async sendMessage(content: string): Promise<{ success: boolean; result?: any; error?: string }> {
+    if (!this.isConnected() || !this.liveConnection) {
+      return { success: false, error: 'Connector is not connected' };
+    }
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      return { success: false, error: 'Message content cannot be empty' };
+    }
+    try {
+      if (typeof this.liveConnection.sendMessage === 'function') {
+        const result = await this.liveConnection.sendMessage(content.trim());
+        return { success: true, result };
+      }
+      return { success: false, error: 'sendMessage is not supported by the underlying connector instance' };
+    } catch (err: any) {
+      this.safeLog('error', `Failed to send chat: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
   private async createUpstreamConnection(options: ConnectorOptions): Promise<any> {
     let mod: any;
     try {
@@ -119,12 +147,27 @@ export class LiveTikTokConnector extends BaseConnector {
       throw new Error('tiktok-live-connector v2+ is required (TikTokLiveConnection export not found)');
     }
 
-    return new TikTokLiveConnection(this.creatorUsername, {
+    const connectionOptions: any = {
       processInitialData: false,
       enableExtendedGiftInfo:
         options.enableExtendedGiftInfo ?? process.env.TIKTOK_EXTENDED_GIFT_INFO === 'true',
       signApiKey: process.env.TIKTOK_SIGN_API_KEY || undefined,
-    });
+    };
+
+    if (options.sessionCookies) {
+      connectionOptions.session = {
+        cookie: {
+          type: 'cookie',
+          value: {
+            sessionId: options.sessionCookies.sessionId,
+            ttTargetIdc: options.sessionCookies.ttTargetIdc || 'useast1a',
+          },
+        },
+      };
+      connectionOptions.authenticateWs = true;
+    }
+
+    return new TikTokLiveConnection(this.creatorUsername, connectionOptions);
   }
 
   private async teardownUpstream(): Promise<void> {
@@ -197,6 +240,45 @@ export class LiveTikTokConnector extends BaseConnector {
       });
     });
 
+    connection.on('questionNew', (raw: any) => {
+      this.handleIncomingRawEvent('questionNew' as any, raw, {
+        questionId: raw?.questionId ? String(raw.questionId) : null,
+        questionText: String(raw?.questionText ?? raw?.content ?? ''),
+      });
+    });
+
+    connection.on('linkMicBattle', (raw: any) => {
+      this.handleIncomingRawEvent('linkMicBattle' as any, raw, {
+        battleId: raw?.battleId ? String(raw.battleId) : null,
+        status: raw?.status !== undefined ? String(raw.status) : null,
+        teams: Array.isArray(raw?.teams) ? raw.teams : [],
+      });
+    });
+
+    connection.on('roomPin', (raw: any) => {
+      this.handleIncomingRawEvent('roomPin' as any, raw, {
+        pinnedMessageId: raw?.pinnedMessageId ? String(raw.pinnedMessageId) : null,
+        pinnedComment: raw?.content || raw?.comment || null,
+        operatorUserId: raw?.operator?.id ? String(raw.operator.id) : null,
+      });
+    });
+
+    connection.on('superFan', (raw: any) => {
+      this.handleIncomingRawEvent('superFan' as any, raw, {
+        level: raw?.level !== undefined ? Number(raw.level) : null,
+        fanType: raw?.fanType || 'super_fan',
+      });
+    });
+
+    connection.on('oecLiveShopping', (raw: any) => {
+      this.handleIncomingRawEvent('oecLiveShopping' as any, raw, {
+        productId: raw?.productId ? String(raw.productId) : null,
+        title: raw?.title || raw?.productTitle || null,
+        price: raw?.price || null,
+        imageUrl: raw?.imageUrl || null,
+      });
+    });
+
     connection.on('streamEnd', () => {
       this.safeLog('info', `Stream ended by creator @${this.creatorUsername}`);
       this.transitionTo('ended', 'LIVE_ENDED_BY_CREATOR');
@@ -220,7 +302,7 @@ export class LiveTikTokConnector extends BaseConnector {
     });
   }
 
-  private handleIncomingRawEvent(eventType: EventType, raw: any, payload: any): void {
+  private handleIncomingRawEvent(eventType: EventType | string, raw: any, payload: any): void {
     // Messages can arrive before connect() resolves; only drop them once terminal
     if (!this.options || ['disconnected', 'ended', 'failed'].includes(this.status)) return;
 
@@ -228,7 +310,7 @@ export class LiveTikTokConnector extends BaseConnector {
     const normalizedUser =
       eventType === 'roomUser'
         ? null
-        : this.normalizationService.normalizeUserFromEvent(raw, eventType);
+        : this.normalizationService.normalizeUserFromEvent(raw, eventType as any);
 
     const msgId = raw?.common?.msgId;
     const createTime = Number(raw?.common?.createTime);

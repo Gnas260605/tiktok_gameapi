@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tu Tiên Live — Quản Trị Hệ Thống (Admin ProMax)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Noto+Serif:ital,wght@0,600;0,700;0,900;1,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090D21;
+      --bg-surface: #0E1538;
+      --bg-card: rgba(18, 26, 62, 0.75);
+      --bg-input: #070B1E;
+      --border: rgba(127, 211, 255, 0.16);
+      --border-focus: #7FD3FF;
+      
+      --text: #F0F4FF;
+      --text-muted: #8EA0C4;
+      --text-dim: #5A6D94;
+      
+      --cyan: #7FD3FF;
+      --cyan-glow: rgba(127, 211, 255, 0.35);
+      --gold: #F2C14E;
+      --gold-glow: rgba(242, 193, 78, 0.35);
+      --crimson: #E8452C;
+      --emerald: #50E3C2;
+      --violet: #9B6BFF;
+      
+      --font-display: 'Noto Serif', serif;
+      --font-body: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Be Vietnam Pro', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* -------------------------------------------------------------
+       Top Navigation Bar
+       ------------------------------------------------------------- */
+    #header {
+      background: rgba(14, 21, 56, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-crest {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1A2860 0%, #0B1333 100%);
+      border: 1.5px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 15px var(--gold-glow);
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 800;
+      color: #FFF;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.35);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+      color: #FFF;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .nav-btn.active {
+      color: #000;
+      background: var(--gold);
+      box-shadow: 0 0 12px var(--gold-glow);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-pill {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: rgba(80, 227, 194, 0.12);
+      border: 1px solid rgba(80, 227, 194, 0.35);
+      color: var(--emerald);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+    }
+
+    .btn-auth {
+      background: rgba(232, 69, 44, 0.15);
+      border: 1px solid rgba(232, 69, 44, 0.35);
+      color: #FF7B6B;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-auth:hover {
+      background: var(--crimson);
+      color: #FFF;
+    }
+
+    /* -------------------------------------------------------------
+       Main Layout Containers
+       ------------------------------------------------------------- */
+    #main-content {
+      flex: 1;
+      max-width: 1360px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px 24px 60px;
+    }
+
+    .tab-section {
+      display: none;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .tab-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(6px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* -------------------------------------------------------------
+       Authentication Overlay (If no Key in sessionStorage)
+       ------------------------------------------------------------- */
+    #auth-screen {
+      max-width: 480px;
+      margin: 80px auto;
+      background: var(--bg-surface);
+      border: 1.5px solid var(--cyan);
+      border-radius: 20px;
+      padding: 36px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 35px var(--cyan-glow);
+      text-align: center;
+    }
+
+    .auth-title {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #FFF;
+    }
+
+    .auth-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    /* -------------------------------------------------------------
+       Form Controls & UI Cards
+       ------------------------------------------------------------- */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 6px;
+      letter-spacing: 0.4px;
+    }
+
+    .form-help {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #FFF;
+      font-family: var(--font-mono);
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    .switch-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+
+    .switch-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* -------------------------------------------------------------
+       Buttons & Actions
+       ------------------------------------------------------------- */
+    .btn {
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #F2C14E 0%, #D49B25 100%);
+      color: #000;
+      box-shadow: 0 4px 14px var(--gold-glow);
+    }
+    .btn-gold:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    .btn-cyan {
+      background: linear-gradient(135deg, #2F8CFF 0%, #1565C0 100%);
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(47, 140, 255, 0.35);
+    }
+    .btn-cyan:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #E8452C 0%, #B7210C 100%);
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(232, 69, 44, 0.35);
+    }
+    .btn-danger:hover { filter: brightness(1.1); }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-ghost:hover { background: rgba(255, 255, 255, 0.15); }
+
+    .preset-toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 12px 16px;
+      background: rgba(242, 193, 78, 0.06);
+      border: 1px dashed rgba(242, 193, 78, 0.3);
+      border-radius: 12px;
+    }
+
+    /* -------------------------------------------------------------
+       Tables & Lists
+       ------------------------------------------------------------- */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      background: rgba(14, 21, 56, 0.9);
+      color: var(--cyan);
+      padding: 12px 16px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.6px;
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-applied { background: rgba(80, 227, 194, 0.15); color: #50E3C2; border: 1px solid rgba(80, 227, 194, 0.3); }
+    .badge-pending { background: rgba(242, 193, 78, 0.15); color: #F2C14E; border: 1px solid rgba(242, 193, 78, 0.3); }
+    .badge-failed { background: rgba(232, 69, 44, 0.15); color: #E8452C; border: 1px solid rgba(232, 69, 44, 0.3); }
+    .badge-realm { background: rgba(127, 211, 255, 0.15); color: #7FD3FF; border: 1px solid rgba(127, 211, 255, 0.3); }
+
+    /* -------------------------------------------------------------
+       Modal Windows
+       ------------------------------------------------------------- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-surface);
+      border: 1.5px solid var(--border-focus);
+      border-radius: 18px;
+      max-width: 580px;
+      width: 100%;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .conflict-alert {
+      background: rgba(232, 69, 44, 0.12);
+      border: 1px solid var(--crimson);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 20px;
+      color: #FFB3A7;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =============================================================
+       01. TOP NAVIGATION HEADER
+       ============================================================= -->
+  <header id="header">
+    <div class="brand">
+      <div class="brand-crest">⚡</div>
+      <div>
+        <div class="brand-title">TU TIÊN LIVE — QUẢN TRỊ</div>
+        <div class="brand-badge">Streamer Pro Control</div>
+      </div>
+    </div>
+
+    <!-- Tab Switcher (Visible when Authenticated) -->
+    <nav class="nav-tabs" id="nav-tabs" style="display: none;">
+      <button class="nav-btn active" data-tab="config">⚙️ Cấu Hình Game</button>
+      <button class="nav-btn" data-tab="players">👥 Người Chơi</button>
+      <button class="nav-btn" data-tab="gifts">🎁 Giao Dịch Quà</button>
+      <button class="nav-btn" data-tab="audit">📜 Kiểm Toán & Sức Khỏe</button>
+    </nav>
+
+    <div class="header-actions">
+      <div class="status-pill" id="health-pill">
+        <span class="status-dot"></span>
+        <span id="health-text">Đang kết nối...</span>
+      </div>
+      <button class="btn-auth" id="btn-logout" style="display: none;">Đăng Xuất</button>
+    </div>
+  </header>
+
+  <!-- =============================================================
+       02. MAIN CONTAINER
+       ============================================================= -->
+  <main id="main-content">
+
+    <!-- 02.1 AUTHENTICATION CARD (IF NOT AUTHENTICATED) -->
+    <section id="auth-screen">
+      <div style="font-size: 48px; margin-bottom: 14px;">🔐</div>
+      <h2 class="auth-title">Đăng Nhập Quản Trị</h2>
+      <p class="auth-desc">Nhập API Key có quyền <code>game:admin</code> (hoặc wildcard <code>*</code>). Key được lưu trữ an toàn trong <code>sessionStorage</code> của phiên duyệt web này.</p>
+      
+      <div class="form-group" style="text-align: left;">
+        <label class="form-label" for="admin-key-input">API Key Quản Trị</label>
+        <input type="password" id="admin-key-input" class="input" placeholder="tik_live_...">
+      </div>
+
+      <button class="btn btn-gold" id="btn-login" style="width: 100%; justify-content: center; margin-top: 10px;">
+        Xác Thực & Truy Cập
+      </button>
+      <div id="auth-error" style="color: var(--crimson); font-size: 13px; margin-top: 12px; display: none;"></div>
+    </section>
+
+    <!-- 02.2 TAB 1: GAMEPLAY CONFIGURATION -->
+    <section class="tab-section" id="tab-config">
+      
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">⚙️ Cấu Hình Tham Số Gameplay</h3>
+            <p class="card-desc">Cấu hình lưu động được cache theo tenant và bảo vệ bằng số hiệu Revision chống xung đột (Optimistic Concurrency Control).</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-ghost" id="btn-reload-config">🔄 Nạp Lại</button>
+            <button class="btn btn-gold" id="btn-save-config">💾 Lưu Cấu Hình</button>
+          </div>
+        </div>
+
+        <!-- Conflict Alert Banner (409) -->
+        <div class="conflict-alert" id="config-conflict-alert">
+          <div>
+            <b>⚠️ Xung đột sửa đổi (Revision Mismatch)!</b> Cấu hình đã bị thay đổi ở phiên khác. Vui lòng nạp lại để cập nhật bản mới nhất.
+          </div>
+          <button class="btn btn-danger" id="btn-resolve-conflict" style="padding: 4px 10px; font-size: 12px;">Nạp Lại Ngay</button>
+        </div>
+
+        <!-- Presets Toolbar -->
+        <div class="preset-toolbar">
+          <span style="font-size: 12px; font-weight: 800; color: var(--gold);">PRESET NHANH:</span>
+          <button class="btn btn-ghost" id="preset-default" style="font-size: 12px;">🌟 Chuẩn GDD (Phòng Vừa/Lớn)</button>
+          <button class="btn btn-ghost" id="preset-fast" style="font-size: 12px;">⚡ Fast-Paced (Phòng Nhỏ / Tiến Trình x10)</button>
+          <span style="margin-left: auto; font-size: 12px; color: var(--text-dim);" id="cfg-revision-badge">Revision: #1</span>
+        </div>
+
+        <div class="grid-3">
+          <div class="switch-group">
+            <span class="switch-label">Bật Game Tu Tiên</span>
+            <input type="checkbox" id="cfg-gameEnabled" checked>
+          </div>
+          <div class="switch-group">
+            <span class="switch-label">Xử Lý Quà Tặng (Gift)</span>
+            <input type="checkbox" id="cfg-giftProcessingEnabled" checked>
+          </div>
+          <div class="switch-group">
+            <span class="switch-label">Hiệu Ứng Hình Ảnh (Effects)</span>
+            <input type="checkbox" id="cfg-effectsEnabled" checked>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 14px;">
+          <div class="form-group">
+            <label class="form-label" for="cfg-tuViMultiplier">Hệ Số Quy Đổi Tu Vi (tuViMultiplier)</label>
+            <input type="number" id="cfg-tuViMultiplier" class="input" min="1" max="1000" value="10">
+            <p class="form-help">Số tu vi nhận được trên 1 Kim cương quà tặng (mặc định 10; phòng nhỏ có thể chỉnh 100).</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfg-maxChanceBp">Trần Tỷ Lệ Độ Kiếp (maxChanceBp)</label>
+            <input type="number" id="cfg-maxChanceBp" class="input" min="0" max="10000" value="8000">
+            <p class="form-help">Tính theo Basis Points (8000 = 80%; 10000 = 100%).</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfg-preparationSeconds">Thời Gian Đếm Ngược Độ Kiếp (giây)</label>
+            <input type="number" id="cfg-preparationSeconds" class="input" min="10" max="120" value="30">
+            <p class="form-help">Khoảng thời gian người xem có thể tặng quà hỗ trợ tăng tỷ lệ sống sót (10 - 120s).</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfg-cooldownSeconds">Hồi Chiêu Sau Thất Bại (giây)</label>
+            <input type="number" id="cfg-cooldownSeconds" class="input" min="0" max="86400" value="300">
+            <p class="form-help">Thời gian đóng băng độ kiếp nếu thất bại (300s = 5 phút).</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfg-failurePenaltyRatio">Tỷ Lệ Phạt Tu Vi Khi Thất Bại (0..1)</label>
+            <input type="number" id="cfg-failurePenaltyRatio" class="input" step="0.05" min="0" max="1" value="0.3">
+            <p class="form-help">Hao hụt tu vi khi vượt kiếp không thành (0.3 = 30% tu vi yêu cầu của tầng đỉnh).</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cfg-maxOverflowRatio">Hệ Số Tràn Tu Vi Tối Đa (maxOverflowRatio)</label>
+            <input type="number" id="cfg-maxOverflowRatio" class="input" step="0.1" min="0" max="100" value="2.0">
+            <p class="form-help">Cho phép tích lũy vượt trần tối đa gấp bao nhiêu lần khi ở đỉnh cảnh giới.</p>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 02.3 TAB 2: PLAYER MANAGEMENT -->
+    <section class="tab-section" id="tab-players">
+      
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">👥 Danh Sách Đạo Hữu (Người Chơi)</h3>
+            <p class="card-desc">Tìm kiếm, theo dõi hồ sơ tu vi, lịch sử độ kiếp và can thiệp thủ công có ghi vết kiểm toán.</p>
+          </div>
+          <div style="display: flex; gap: 8px; width: 340px;">
+            <input type="text" id="player-search-input" class="input" placeholder="Tìm theo username hoặc nickname...">
+            <button class="btn btn-cyan" id="btn-search-player">Tìm</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Người Chơi</th>
+                <th>Cảnh Giới</th>
+                <th>Tầng</th>
+                <th>Tu Vi Hiện Tại</th>
+                <th>Độ Kiếp (Thắng/Bại)</th>
+                <th>Trạng Thái</th>
+                <th>Hành Động</th>
+              </tr>
+            </thead>
+            <tbody id="player-table-body">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-dim); padding: 30px;">
+                  Nhập từ khóa hoặc nhấn "Tìm" để hiển thị danh sách người chơi.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 02.4 TAB 3: GIFT TRANSACTIONS & RECONCILIATION -->
+    <section class="tab-section" id="tab-gifts">
+      
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">🎁 Sổ Cái Giao Dịch Quà Tặng (Gift Ledger)</h3>
+            <p class="card-desc">Lịch sử quy đổi tu vi và bonus độ kiếp. Các giao dịch lỗi có thể được kích hoạt thử lại.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <select id="gift-status-filter" class="input" style="width: 160px;">
+              <option value="">Tất Cả Trạng Thái</option>
+              <option value="applied">Applied (Thành công)</option>
+              <option value="pending">Pending (Đang chờ)</option>
+              <option value="failed">Failed (Thất bại / Lỗi)</option>
+              <option value="expired">Expired (Hết hạn)</option>
+            </select>
+            <button class="btn btn-ghost" id="btn-refresh-gifts">🔄 Làm Mới</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Thời Gian</th>
+                <th>Người Tặng</th>
+                <th>Quà Tặng</th>
+                <th>Kim Cương</th>
+                <th>Tu Vi Nhận</th>
+                <th>Loại Giao Dịch</th>
+                <th>Trạng Thái</th>
+                <th>Xử Lý</th>
+              </tr>
+            </thead>
+            <tbody id="gift-table-body">
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-dim); padding: 30px;">
+                  Đang tải danh sách giao dịch quà tặng...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 02.5 TAB 4: AUDIT LOGS & SYSTEM HEALTH -->
+    <section class="tab-section" id="tab-audit">
+      
+      <!-- System Health Quick Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">🩺 Trạng Thái Sức Khỏe Máy Chủ (System Health)</h3>
+            <p class="card-desc">Thông số vận hành thời gian thực của máy chủ game Tu Tiên Live.</p>
+          </div>
+          <button class="btn btn-ghost" id="btn-refresh-health">🔄 Cập Nhật</button>
+        </div>
+
+        <div class="grid-3" id="health-metrics-grid">
+          <div class="form-group">
+            <span class="form-label">Tình Trạng Chung</span>
+            <div id="metric-status" style="font-size: 18px; font-weight: 800; color: var(--emerald);">HEALTHY</div>
+          </div>
+          <div class="form-group">
+            <span class="form-label">Thời Gian Uptime</span>
+            <div id="metric-uptime" style="font-size: 18px; font-weight: 800; font-family: var(--font-mono);">0s</div>
+          </div>
+          <div class="form-group">
+            <span class="form-label">Phiên Độ Kiếp Đang Chạy</span>
+            <div id="metric-breakthroughs" style="font-size: 18px; font-weight: 800; color: var(--gold); font-family: var(--font-mono);">0</div>
+          </div>
+          <div class="form-group">
+            <span class="form-label">Quà Tặng Chờ Xử Lý (Pending)</span>
+            <div id="metric-pending-gifts" style="font-size: 18px; font-weight: 800; font-family: var(--font-mono);">0</div>
+          </div>
+          <div class="form-group">
+            <span class="form-label">Giao Dịch Quà Thất Bại (Failed)</span>
+            <div id="metric-failed-gifts" style="font-size: 18px; font-weight: 800; color: var(--crimson); font-family: var(--font-mono);">0</div>
+          </div>
+          <div class="form-group">
+            <span class="form-label">Revision Cấu Hình</span>
+            <div id="metric-revision" style="font-size: 18px; font-weight: 800; color: var(--cyan); font-family: var(--font-mono);">#1</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Logs Table -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">📜 Nhật Ký Kiểm Toán Can Thiệp (Audit Logs)</h3>
+            <p class="card-desc">Ghi nhận minh bạch mọi thao tác can thiệp thủ công từ streamer / admin kèm lý do.</p>
+          </div>
+          <button class="btn btn-ghost" id="btn-refresh-audit">🔄 Làm Mới</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Thời Gian</th>
+                <th>Hành Động</th>
+                <th>Đối Tượng</th>
+                <th>Lý Do Bắt Buộc</th>
+                <th>Thay Đổi (Trước ➔ Sau)</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-dim); padding: 30px;">
+                  Đang tải nhật ký kiểm toán...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- =============================================================
+       03. MODALS (ADJUST PLAYER & RESET CONFIRMATION)
+       ============================================================= -->
+  
+  <!-- Modal 1: Adjust Player Profile (PATCH) -->
+  <div class="modal-backdrop" id="modal-adjust-player">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-family: var(--font-display); font-size: 18px; color: var(--cyan);">Chỉnh Sửa Hồ Sơ Đạo Hữu</h3>
+        <button class="btn btn-ghost" id="btn-close-adjust" style="padding: 4px 8px;">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Đạo Hữu:</label>
+        <div id="adj-player-name" style="font-weight: 700; font-size: 16px; margin-bottom: 12px; color: #FFF;"></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label" for="adj-realm">Cảnh Giới (1-8)</label>
+          <select id="adj-realm" class="input">
+            <option value="1">1. Luyện Khí</option>
+            <option value="2">2. Trúc Cơ</option>
+            <option value="3">3. Kim Đan</option>
+            <option value="4">4. Nguyên Anh</option>
+            <option value="5">5. Hóa Thần</option>
+            <option value="6">6. Luyện Hư</option>
+            <option value="7">7. Hợp Thể</option>
+            <option value="8">8. Đại Thừa</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="adj-level">Tầng (1-10)</label>
+          <input type="number" id="adj-level" class="input" min="1" max="10" value="1">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="adj-exp">Tu Vi Hiện Tại (BigInt String)</label>
+        <input type="text" id="adj-exp" class="input" placeholder="0">
+      </div>
+
+      <div class="switch-group">
+        <span class="switch-label">Xóa Thời Gian Hồi Chiêu (Clear Cooldown)</span>
+        <input type="checkbox" id="adj-clear-cooldown">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="adj-reason">Lý Do Can Thiệp (Bắt buộc tối thiểu 5 ký tự)</label>
+        <input type="text" id="adj-reason" class="input" placeholder="Ví dụ: Bù tu vi do sự cố mạng...">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button class="btn btn-ghost" id="btn-cancel-adjust">Hủy Bỏ</button>
+        <button class="btn btn-cyan" id="btn-submit-adjust">Lưu Thay Đổi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Reset Player Progress (POST .../reset) -->
+  <div class="modal-backdrop" id="modal-reset-player">
+    <div class="modal-content" style="border-color: var(--crimson);">
+      <div class="modal-header">
+        <h3 style="font-family: var(--font-display); font-size: 18px; color: var(--crimson);">⚠️ Xác Nhận Reset Đạo Hữu</h3>
+        <button class="btn btn-ghost" id="btn-close-reset" style="padding: 4px 8px;">✕</button>
+      </div>
+
+      <p style="font-size: 13px; color: #FFA39E; line-height: 1.5; margin-bottom: 16px;">
+        Hành động này sẽ <b>xóa toàn bộ tiến trình tu luyện</b> của người chơi về <b>Luyện Khí · Tầng 1</b> (0 tu vi). Hành động này không thể hoàn tác!
+      </p>
+
+      <div class="form-group">
+        <label class="form-label" for="reset-confirm-username">
+          Gõ lại chính xác Username <code id="reset-target-username" style="color:var(--gold); font-size:14px;"></code> để xác nhận:
+        </label>
+        <input type="text" id="reset-confirm-username" class="input" placeholder="Nhập username...">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="reset-reason">Lý Do Reset (Bắt buộc tối thiểu 5 ký tự)</label>
+        <input type="text" id="reset-reason" class="input" placeholder="Ví dụ: Reset theo yêu cầu của người chơi...">
+      </div>
+
+      <div class="switch-group">
+        <span class="switch-label">Giữ Lại Tổng Tu Vi & Kim Cương Đã Tặng (keepTotals)</span>
+        <input type="checkbox" id="reset-keep-totals" checked>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button class="btn btn-ghost" id="btn-cancel-reset">Hủy</button>
+        <button class="btn btn-danger" id="btn-submit-reset">Xác Nhận Reset Về Cảnh Giới 1</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================================================
+       04. CONTROLLER SCRIPT (SAFE DOM, textContent ONLY)
+       ============================================================= -->
+  <script>
+    (function() {
+      'use strict';
+
+      const STORAGE_KEY_ADMIN = 'tutien_admin_key';
+
+      const REALM_NAMES = [
+        'Luyện Khí', 'Trúc Cơ', 'Kim Đan', 'Nguyên Anh',
+        'Hóa Thần', 'Luyện Hư', 'Hợp Thể', 'Đại Thừa'
+      ];
+
+      const state = {
+        apiKey: sessionStorage.getItem(STORAGE_KEY_ADMIN) || '',
+        activeTab: 'config',
+        currentConfig: null,
+        selectedPlayer: null,
+      };
+
+      // -------------------------------------------------------------
+      // Helpers & API Fetch
+      // -------------------------------------------------------------
+      function sanitize(str) {
+        return str === null || str === undefined ? '' : String(str);
+      }
+
+      function formatNumber(val) {
+        if (!val) return '0';
+        try {
+          const num = typeof val === 'bigint' ? val : BigInt(val.toString());
+          return num.toLocaleString('vi-VN');
+        } catch(e) {
+          return String(val);
+        }
+      }
+
+      function formatDate(isoStr) {
+        if (!isoStr) return '-';
+        try {
+          const d = new Date(isoStr);
+          return d.toLocaleTimeString('vi-VN') + ' ' + d.toLocaleDateString('vi-VN');
+        } catch(e) {
+          return isoStr;
+        }
+      }
+
+      async function adminApi(endpoint, method = 'GET', body = null) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (state.apiKey) {
+          headers['X-API-Key'] = state.apiKey;
+        }
+
+        const res = await fetch(endpoint, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : null
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const err = new Error(data.error?.message || `Lỗi HTTP ${res.status}`);
+          err.status = res.status;
+          err.code = data.error?.code;
+          throw err;
+        }
+        return data;
+      }
+
+      // -------------------------------------------------------------
+      // Authentication Management
+      // -------------------------------------------------------------
+      const authScreen = document.getElementById('auth-screen');
+      const navTabs = document.getElementById('nav-tabs');
+      const btnLogout = document.getElementById('btn-logout');
+      const authError = document.getElementById('auth-error');
+      const adminKeyInput = document.getElementById('admin-key-input');
+      const healthPill = document.getElementById('health-pill');
+      const healthText = document.getElementById('health-text');
+
+      async function checkAuth() {
+        if (!state.apiKey) {
+          showAuthScreen();
+          return;
+        }
+
+        try {
+          healthText.textContent = 'Kiểm tra quyền...';
+          const res = await adminApi('/api/v1/game/admin/health');
+          // Auth OK
+          authScreen.style.display = 'none';
+          navTabs.style.display = 'flex';
+          btnLogout.style.display = 'inline-block';
+          healthText.textContent = 'Máy Chủ Sẵn Sàng';
+          healthPill.style.display = 'flex';
+          switchTab(state.activeTab);
+        } catch (err) {
+          console.warn('Xác thực thất bại:', err);
+          showAuthScreen('API Key không hợp lệ hoặc thiếu quyền game:admin.');
+        }
+      }
+
+      function showAuthScreen(errorMsg = '') {
+        sessionStorage.removeItem(STORAGE_KEY_ADMIN);
+        state.apiKey = '';
+        authScreen.style.display = 'block';
+        navTabs.style.display = 'none';
+        btnLogout.style.display = 'none';
+        healthText.textContent = 'Chưa Xác Thực';
+        document.querySelectorAll('.tab-section').forEach(el => el.classList.remove('active'));
+
+        if (errorMsg) {
+          authError.textContent = errorMsg;
+          authError.style.display = 'block';
+        } else {
+          authError.style.display = 'none';
+        }
+      }
+
+      document.getElementById('btn-login').addEventListener('click', async () => {
+        const key = adminKeyInput.value.trim();
+        if (!key) {
+          authError.textContent = 'Vui lòng nhập API Key!';
+          authError.style.display = 'block';
+          return;
+        }
+        state.apiKey = key;
+        sessionStorage.setItem(STORAGE_KEY_ADMIN, key);
+        await checkAuth();
+      });
+
+      btnLogout.addEventListener('click', () => {
+        showAuthScreen();
+      });
+
+      // -------------------------------------------------------------
+      // Tab Navigation
+      // -------------------------------------------------------------
+      function switchTab(tabId) {
+        state.activeTab = tabId;
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+        document.querySelectorAll('.tab-section').forEach(sec => {
+          sec.classList.toggle('active', sec.id === `tab-${tabId}`);
+        });
+
+        if (tabId === 'config') loadConfig();
+        if (tabId === 'players') loadPlayers();
+        if (tabId === 'gifts') loadGifts();
+        if (tabId === 'audit') { loadAuditLogs(); loadHealth(); }
+      }
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+
+      // -------------------------------------------------------------
+      // Tab 1: Config Management & Presets
+      // -------------------------------------------------------------
+      const conflictAlert = document.getElementById('config-conflict-alert');
+      const revisionBadge = document.getElementById('cfg-revision-badge');
+
+      async function loadConfig() {
+        conflictAlert.style.display = 'none';
+        try {
+          const res = await adminApi('/api/v1/game/admin/config');
+          state.currentConfig = res.data;
+          revisionBadge.textContent = `Revision: #${res.data.revision}`;
+
+          const v = res.data.values || {};
+          document.getElementById('cfg-gameEnabled').checked = v.gameEnabled !== false;
+          document.getElementById('cfg-giftProcessingEnabled').checked = v.giftProcessingEnabled !== false;
+          document.getElementById('cfg-effectsEnabled').checked = v.effectsEnabled !== false;
+          document.getElementById('cfg-tuViMultiplier').value = v.tuViMultiplier || 10;
+          document.getElementById('cfg-maxChanceBp').value = v.maxChanceBp || 8000;
+          document.getElementById('cfg-preparationSeconds').value = v.preparationSeconds || 30;
+          document.getElementById('cfg-cooldownSeconds').value = v.cooldownSeconds || 300;
+          document.getElementById('cfg-failurePenaltyRatio').value = v.failurePenaltyRatio || 0.3;
+          document.getElementById('cfg-maxOverflowRatio').value = v.maxOverflowRatio || 2.0;
+        } catch (e) {
+          alert('Không thể tải cấu hình: ' + e.message);
+        }
+      }
+
+      document.getElementById('btn-reload-config').addEventListener('click', loadConfig);
+      document.getElementById('btn-resolve-conflict').addEventListener('click', loadConfig);
+
+      // Presets
+      document.getElementById('preset-default').addEventListener('click', () => {
+        document.getElementById('cfg-tuViMultiplier').value = 10;
+        document.getElementById('cfg-maxChanceBp').value = 8000;
+        document.getElementById('cfg-preparationSeconds').value = 30;
+        document.getElementById('cfg-cooldownSeconds').value = 300;
+        document.getElementById('cfg-failurePenaltyRatio').value = 0.3;
+        document.getElementById('cfg-maxOverflowRatio').value = 2.0;
+      });
+
+      document.getElementById('preset-fast').addEventListener('click', () => {
+        document.getElementById('cfg-tuViMultiplier').value = 100;
+        document.getElementById('cfg-maxChanceBp').value = 9000;
+        document.getElementById('cfg-preparationSeconds').value = 15;
+        document.getElementById('cfg-cooldownSeconds').value = 60;
+        document.getElementById('cfg-failurePenaltyRatio').value = 0.15;
+        document.getElementById('cfg-maxOverflowRatio').value = 5.0;
+      });
+
+      document.getElementById('btn-save-config').addEventListener('click', async () => {
+        if (!state.currentConfig) return;
+
+        const values = {
+          gameEnabled: document.getElementById('cfg-gameEnabled').checked,
+          giftProcessingEnabled: document.getElementById('cfg-giftProcessingEnabled').checked,
+          effectsEnabled: document.getElementById('cfg-effectsEnabled').checked,
+          tuViMultiplier: parseInt(document.getElementById('cfg-tuViMultiplier').value, 10),
+          maxChanceBp: parseInt(document.getElementById('cfg-maxChanceBp').value, 10),
+          preparationSeconds: parseInt(document.getElementById('cfg-preparationSeconds').value, 10),
+          cooldownSeconds: parseInt(document.getElementById('cfg-cooldownSeconds').value, 10),
+          failurePenaltyRatio: parseFloat(document.getElementById('cfg-failurePenaltyRatio').value),
+          maxOverflowRatio: parseFloat(document.getElementById('cfg-maxOverflowRatio').value),
+        };
+
+        try {
+          const res = await adminApi('/api/v1/game/admin/config', 'PUT', {
+            baseRevision: state.currentConfig.revision,
+            values
+          });
+          state.currentConfig = res.data;
+          revisionBadge.textContent = `Revision: #${res.data.revision}`;
+          conflictAlert.style.display = 'none';
+          alert('Lưu cấu hình thành công!');
+        } catch (err) {
+          if (err.status === 409 || err.code === 'CONFLICT') {
+            conflictAlert.style.display = 'flex';
+          } else {
+            alert('Lỗi lưu cấu hình: ' + err.message);
+          }
+        }
+      });
+
+      // -------------------------------------------------------------
+      // Tab 2: Player Management
+      // -------------------------------------------------------------
+      const playerTableBody = document.getElementById('player-table-body');
+      const playerSearchInput = document.getElementById('player-search-input');
+
+      async function loadPlayers(search = '') {
+        try {
+          const url = search ? `/api/v1/game/players?q=${encodeURIComponent(search)}` : '/api/v1/game/players';
+          const res = await adminApi(url);
+          const players = res.data || [];
+
+          while (playerTableBody.firstChild) {
+            playerTableBody.removeChild(playerTableBody.firstChild);
+          }
+
+          if (players.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 7;
+            td.style.textAlign = 'center';
+            td.style.color = 'var(--text-dim)';
+            td.style.padding = '30px';
+            td.textContent = 'Không tìm thấy người chơi nào.';
+            tr.appendChild(td);
+            playerTableBody.appendChild(tr);
+            return;
+          }
+
+          players.forEach(p => {
+            const tr = document.createElement('tr');
+
+            // Name
+            const tdName = document.createElement('td');
+            const nameDiv = document.createElement('div');
+            nameDiv.style.fontWeight = '700';
+            nameDiv.textContent = sanitize(p.nickname || p.username);
+            const userSub = document.createElement('div');
+            userSub.style.fontSize = '11px';
+            userSub.style.color = 'var(--text-dim)';
+            userSub.textContent = `@${sanitize(p.username)}`;
+            tdName.appendChild(nameDiv);
+            tdName.appendChild(userSub);
+
+            // Realm
+            const tdRealm = document.createElement('td');
+            const rBadge = document.createElement('span');
+            rBadge.className = 'badge badge-realm';
+            rBadge.textContent = sanitize(p.realmName || `Cảnh Giới #${p.realmOrder}`);
+            tdRealm.appendChild(rBadge);
+
+            // Level
+            const tdLevel = document.createElement('td');
+            tdLevel.textContent = `Tầng ${p.level}`;
+            if (p.isMaxLevel) {
+              const maxTag = document.createElement('span');
+              maxTag.style.color = 'var(--gold)';
+              maxTag.style.fontSize = '11px';
+              maxTag.textContent = ' (ĐVM)';
+              tdLevel.appendChild(maxTag);
+            }
+
+            // Exp
+            const tdExp = document.createElement('td');
+            tdExp.style.fontFamily = 'var(--font-mono)';
+            tdExp.textContent = `${formatNumber(p.currentExp)} / ${formatNumber(p.requiredExp)}`;
+
+            // Breakthrough stats
+            const tdStats = document.createElement('td');
+            tdStats.style.fontFamily = 'var(--font-mono)';
+            tdStats.textContent = `${p.breakthroughSuccessCount || 0} / ${p.breakthroughFailCount || 0}`;
+
+            // Status
+            const tdStatus = document.createElement('td');
+            const sBadge = document.createElement('span');
+            sBadge.className = p.status === 'active' ? 'badge badge-applied' : 'badge badge-failed';
+            sBadge.textContent = p.status === 'active' ? 'Hoạt động' : 'Bị cấm';
+            tdStatus.appendChild(sBadge);
+
+            // Actions
+            const tdAction = document.createElement('td');
+            const btnEdit = document.createElement('button');
+            btnEdit.className = 'btn btn-ghost';
+            btnEdit.style.padding = '4px 8px';
+            btnEdit.style.fontSize = '11px';
+            btnEdit.style.marginRight = '6px';
+            btnEdit.textContent = '✏️ Sửa';
+            btnEdit.onclick = () => openAdjustModal(p);
+
+            const btnReset = document.createElement('button');
+            btnReset.className = 'btn btn-danger';
+            btnReset.style.padding = '4px 8px';
+            btnReset.style.fontSize = '11px';
+            btnReset.textContent = '⚠️ Reset';
+            btnReset.onclick = () => openResetModal(p);
+
+            tdAction.appendChild(btnEdit);
+            tdAction.appendChild(btnReset);
+
+            tr.appendChild(tdName);
+            tr.appendChild(tdRealm);
+            tr.appendChild(tdLevel);
+            tr.appendChild(tdExp);
+            tr.appendChild(tdStats);
+            tr.appendChild(tdStatus);
+            tr.appendChild(tdAction);
+
+            playerTableBody.appendChild(tr);
+          });
+        } catch (e) {
+          console.warn('Lỗi tải danh sách người chơi:', e);
+        }
+      }
+
+      document.getElementById('btn-search-player').addEventListener('click', () => {
+        loadPlayers(playerSearchInput.value.trim());
+      });
+
+      playerSearchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') loadPlayers(playerSearchInput.value.trim());
+      });
+
+      // Modals: Adjust Player
+      const modalAdjust = document.getElementById('modal-adjust-player');
+      const adjPlayerName = document.getElementById('adj-player-name');
+      const adjRealm = document.getElementById('adj-realm');
+      const adjLevel = document.getElementById('adj-level');
+      const adjExp = document.getElementById('adj-exp');
+      const adjClearCd = document.getElementById('adj-clear-cooldown');
+      const adjReason = document.getElementById('adj-reason');
+
+      function openAdjustModal(player) {
+        state.selectedPlayer = player;
+        adjPlayerName.textContent = `${sanitize(player.nickname || player.username)} (@${sanitize(player.username)})`;
+        adjRealm.value = String(player.realmOrder || 1);
+        adjLevel.value = String(player.level || 1);
+        adjExp.value = String(player.currentExp || '0');
+        adjClearCd.checked = false;
+        adjReason.value = '';
+        modalAdjust.classList.add('active');
+      }
+
+      document.getElementById('btn-close-adjust').addEventListener('click', () => modalAdjust.classList.remove('active'));
+      document.getElementById('btn-cancel-adjust').addEventListener('click', () => modalAdjust.classList.remove('active'));
+
+      document.getElementById('btn-submit-adjust').addEventListener('click', async () => {
+        if (!state.selectedPlayer) return;
+        const reason = adjReason.value.trim();
+        if (reason.length < 5) {
+          alert('Lý do bắt buộc phải có ít nhất 5 ký tự!');
+          return;
+        }
+
+        try {
+          await adminApi(`/api/v1/game/admin/players/${state.selectedPlayer.id}`, 'PATCH', {
+            expectedVersion: state.selectedPlayer.version,
+            reason,
+            realmOrder: parseInt(adjRealm.value, 10),
+            level: parseInt(adjLevel.value, 10),
+            currentExp: adjExp.value.trim(),
+            clearCooldown: adjClearCd.checked
+          });
+          modalAdjust.classList.remove('active');
+          alert('Cập nhật hồ sơ thành công!');
+          loadPlayers(playerSearchInput.value.trim());
+        } catch (e) {
+          alert('Lỗi cập nhật: ' + e.message);
+        }
+      });
+
+      // Modals: Reset Player
+      const modalReset = document.getElementById('modal-reset-player');
+      const resetTargetUsername = document.getElementById('reset-target-username');
+      const resetConfirmUsername = document.getElementById('reset-confirm-username');
+      const resetReason = document.getElementById('reset-reason');
+      const resetKeepTotals = document.getElementById('reset-keep-totals');
+
+      function openResetModal(player) {
+        state.selectedPlayer = player;
+        resetTargetUsername.textContent = sanitize(player.username);
+        resetConfirmUsername.value = '';
+        resetReason.value = '';
+        resetKeepTotals.checked = true;
+        modalReset.classList.add('active');
+      }
+
+      document.getElementById('btn-close-reset').addEventListener('click', () => modalReset.classList.remove('active'));
+      document.getElementById('btn-cancel-reset').addEventListener('click', () => modalReset.classList.remove('active'));
+
+      document.getElementById('btn-submit-reset').addEventListener('click', async () => {
+        if (!state.selectedPlayer) return;
+        const confirmUser = resetConfirmUsername.value.trim();
+        const reason = resetReason.value.trim();
+
+        if (confirmUser.toLowerCase() !== state.selectedPlayer.username.toLowerCase()) {
+          alert(`Username xác nhận không khớp! Cần gõ đúng: ${state.selectedPlayer.username}`);
+          return;
+        }
+
+        if (reason.length < 5) {
+          alert('Lý do reset bắt buộc ít nhất 5 ký tự!');
+          return;
+        }
+
+        try {
+          await adminApi(`/api/v1/game/admin/players/${state.selectedPlayer.id}/reset`, 'POST', {
+            confirmUsername: confirmUser,
+            reason,
+            keepTotals: resetKeepTotals.checked
+          });
+          modalReset.classList.remove('active');
+          alert('Đã reset người chơi về Luyện Khí 1!');
+          loadPlayers(playerSearchInput.value.trim());
+        } catch (e) {
+          alert('Lỗi reset: ' + e.message);
+        }
+      });
+
+      // -------------------------------------------------------------
+      // Tab 3: Gift Transactions & Retry
+      // -------------------------------------------------------------
+      const giftTableBody = document.getElementById('gift-table-body');
+      const giftStatusFilter = document.getElementById('gift-status-filter');
+
+      async function loadGifts() {
+        try {
+          const status = giftStatusFilter.value;
+          const url = status ? `/api/v1/game/admin/gift-transactions?status=${status}&limit=30` : '/api/v1/game/admin/gift-transactions?limit=30';
+          const res = await adminApi(url);
+          const gifts = res.data || [];
+
+          while (giftTableBody.firstChild) {
+            giftTableBody.removeChild(giftTableBody.firstChild);
+          }
+
+          if (gifts.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 8;
+            td.style.textAlign = 'center';
+            td.style.color = 'var(--text-dim)';
+            td.style.padding = '30px';
+            td.textContent = 'Không có giao dịch quà tặng nào.';
+            tr.appendChild(td);
+            giftTableBody.appendChild(tr);
+            return;
+          }
+
+          gifts.forEach(g => {
+            const tr = document.createElement('tr');
+
+            // Time
+            const tdTime = document.createElement('td');
+            tdTime.style.fontFamily = 'var(--font-mono)';
+            tdTime.style.fontSize = '11px';
+            tdTime.textContent = formatDate(g.createdAt || g.occurredAt);
+
+            // Player
+            const tdPlayer = document.createElement('td');
+            tdPlayer.textContent = sanitize(g.playerId ? `ID: ${g.playerId.slice(0, 8)}...` : 'Chưa nhập môn');
+
+            // Gift
+            const tdGift = document.createElement('td');
+            tdGift.textContent = `${sanitize(g.giftName)} (x${g.giftQuantity || 1})`;
+
+            // Diamonds
+            const tdDia = document.createElement('td');
+            tdDia.style.fontFamily = 'var(--font-mono)';
+            tdDia.style.color = 'var(--gold)';
+            tdDia.textContent = `${formatNumber(g.totalDiamonds)} 💎`;
+
+            // Exp
+            const tdExp = document.createElement('td');
+            tdExp.style.fontFamily = 'var(--font-mono)';
+            tdExp.style.color = 'var(--emerald)';
+            tdExp.textContent = `+${formatNumber(g.cultivationReceived)}`;
+
+            // Type
+            const tdType = document.createElement('td');
+            tdType.textContent = sanitize(g.transactionType);
+
+            // Status
+            const tdStatus = document.createElement('td');
+            const sBadge = document.createElement('span');
+            sBadge.className = `badge badge-${g.status}`;
+            sBadge.textContent = sanitize(g.status);
+            tdStatus.appendChild(sBadge);
+
+            // Action (Retry if failed)
+            const tdAction = document.createElement('td');
+            if (g.status === 'failed') {
+              const btnRetry = document.createElement('button');
+              btnRetry.className = 'btn btn-cyan';
+              btnRetry.style.padding = '3px 8px';
+              btnRetry.style.fontSize = '11px';
+              btnRetry.textContent = '🔄 Thử Lại';
+              btnRetry.onclick = async () => {
+                try {
+                  await adminApi(`/api/v1/game/admin/gift-transactions/${g.id}/retry`, 'POST');
+                  alert('Đã gửi yêu cầu xử lý lại giao dịch!');
+                  loadGifts();
+                } catch(e) {
+                  alert('Lỗi thử lại: ' + e.message);
+                }
+              };
+              tdAction.appendChild(btnRetry);
+            } else {
+              tdAction.textContent = '-';
+            }
+
+            tr.appendChild(tdTime);
+            tr.appendChild(tdPlayer);
+            tr.appendChild(tdGift);
+            tr.appendChild(tdDia);
+            tr.appendChild(tdExp);
+            tr.appendChild(tdType);
+            tr.appendChild(tdStatus);
+            tr.appendChild(tdAction);
+
+            giftTableBody.appendChild(tr);
+          });
+        } catch (e) {
+          console.warn('Lỗi tải giao dịch quà:', e);
+        }
+      }
+
+      giftStatusFilter.addEventListener('change', loadGifts);
+      document.getElementById('btn-refresh-gifts').addEventListener('click', loadGifts);
+
+      // -------------------------------------------------------------
+      // Tab 4: Audit Logs & Health
+      // -------------------------------------------------------------
+      const auditTableBody = document.getElementById('audit-table-body');
+
+      async function loadAuditLogs() {
+        try {
+          const res = await adminApi('/api/v1/game/admin/audit-logs?limit=30');
+          const logs = res.data || [];
+
+          while (auditTableBody.firstChild) {
+            auditTableBody.removeChild(auditTableBody.firstChild);
+          }
+
+          if (logs.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 5;
+            td.style.textAlign = 'center';
+            td.style.color = 'var(--text-dim)';
+            td.style.padding = '30px';
+            td.textContent = 'Chưa có nhật ký kiểm toán nào.';
+            tr.appendChild(td);
+            auditTableBody.appendChild(tr);
+            return;
+          }
+
+          logs.forEach(l => {
+            const tr = document.createElement('tr');
+
+            // Time
+            const tdTime = document.createElement('td');
+            tdTime.style.fontFamily = 'var(--font-mono)';
+            tdTime.style.fontSize = '11px';
+            tdTime.textContent = formatDate(l.createdAt);
+
+            // Action
+            const tdAction = document.createElement('td');
+            const aBadge = document.createElement('span');
+            aBadge.className = 'badge badge-realm';
+            aBadge.textContent = sanitize(l.action);
+            tdAction.appendChild(aBadge);
+
+            // Target
+            const tdTarget = document.createElement('td');
+            tdTarget.textContent = `${sanitize(l.targetType)}: ${sanitize(l.targetId?.slice(0, 8))}...`;
+
+            // Reason
+            const tdReason = document.createElement('td');
+            tdReason.style.color = '#FFF';
+            tdReason.textContent = sanitize(l.reason);
+
+            // Diff
+            const tdDiff = document.createElement('td');
+            tdDiff.style.fontFamily = 'var(--font-mono)';
+            tdDiff.style.fontSize = '11px';
+            const beforeStr = l.before ? JSON.stringify(l.before) : '{}';
+            const afterStr = l.after ? JSON.stringify(l.after) : '{}';
+            tdDiff.textContent = `${beforeStr} ➔ ${afterStr}`;
+
+            tr.appendChild(tdTime);
+            tr.appendChild(tdAction);
+            tr.appendChild(tdTarget);
+            tr.appendChild(tdReason);
+            tr.appendChild(tdDiff);
+
+            auditTableBody.appendChild(tr);
+          });
+        } catch (e) {
+          console.warn('Lỗi tải audit logs:', e);
+        }
+      }
+
+      async function loadHealth() {
+        try {
+          const res = await adminApi('/api/v1/game/admin/health');
+          const h = res.data || {};
+
+          document.getElementById('metric-status').textContent = (h.status || 'OK').toUpperCase();
+          document.getElementById('metric-uptime').textContent = `${Math.floor(h.uptime || 0)}s`;
+          document.getElementById('metric-breakthroughs').textContent = String(h.activeBreakthroughs || 0);
+          document.getElementById('metric-pending-gifts').textContent = String(h.pendingGifts || 0);
+          document.getElementById('metric-failed-gifts').textContent = String(h.failedGifts || 0);
+          document.getElementById('metric-revision').textContent = `#${h.configRevision || 1}`;
+        } catch(e) {
+          console.warn('Lỗi tải metrics:', e);
+        }
+      }
+
+      document.getElementById('btn-refresh-audit').addEventListener('click', loadAuditLogs);
+      document.getElementById('btn-refresh-health').addEventListener('click', loadHealth);
+
+      // -------------------------------------------------------------
+      // Initial Auto-Auth
+      // -------------------------------------------------------------
+      checkAuth();
+
+    })();
+  </script>
+</body>
+</html>

@@ -932,6 +932,35 @@
             <button class="btn-mock" onclick="injectMockEvent('member')">🚪 Vào Phòng</button>
           </div>
         </div>
+
+        <!-- Voice Studio AI TTS Panel -->
+        <div class="mock-tools" style="background: rgba(13, 17, 28, 0.6); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 0.9rem; margin-top: 1.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
+            <h4 style="margin: 0; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; color: #fff;">
+              🎙️ Voice Studio (AI TTS)
+            </h4>
+            <span id="voiceStatusBadge" style="font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 4px; background: rgba(37, 244, 238, 0.15); color: var(--tiktok-cyan); font-weight: 700;">READY</span>
+          </div>
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.6rem;">
+            <select id="voiceSelect" class="input-field" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
+              <option value="Minh Đức">🇻🇳 Minh Đức (Nam Bắc - Tự nhiên)</option>
+              <option value="Mai Chi">🇻🇳 Mai Chi (Nữ Bắc - Tự nhiên)</option>
+              <option value="Nam Trung">🇻🇳 Nam Trung (Nam Trung - Truyền cảm)</option>
+              <option value="Thu Ngân">🇻🇳 Thu Ngân (Nữ Nam - Ngọt ngào)</option>
+              <option value="Hải Đăng">🇻🇳 Hải Đăng (Nam Bắc - Tin tức)</option>
+              <option value="Lan Anh">🇻🇳 Lan Anh (Nữ Bắc - Dịu dàng)</option>
+              <option value="vi_female">🇻🇳 Nữ (Tự nhiên)</option>
+              <option value="vi_male">🇻🇳 Nam (Ấm áp)</option>
+              <option value="en_female">🇺🇸 English Female</option>
+              <option value="en_male">🇺🇸 English Male</option>
+            </select>
+            <button class="btn-mock" onclick="testVoiceTts()" style="white-space: nowrap; font-size: 0.75rem; padding: 0.35rem 0.65rem;">🔊 Thử giọng</button>
+          </div>
+          <label style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; color: var(--text-muted); cursor: pointer;">
+            <input type="checkbox" id="ttsGiftToggle" checked style="accent-color: var(--tiktok-cyan);">
+            Đọc tên người xem & quà tặng (AI Live Voice)
+          </label>
+        </div>
       </div>
     </aside>
 
@@ -1455,6 +1484,10 @@
         document.getElementById('countGift').innerText = stats.gift;
         playTone(880, 0.25, 'triangle');
 
+        if (document.getElementById('ttsGiftToggle')?.checked) {
+          playVoiceAlert('gift', event);
+        }
+
         eventBody = `
           <div class="gift-banner">
             ${event.data?.giftImageUrl
@@ -1604,6 +1637,112 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    async function initVoiceStudio() {
+      try {
+        const [healthRes, voicesRes] = await Promise.all([
+          fetch('/api/v1/voice/health').catch(() => null),
+          fetch('/api/v1/voice/voices').catch(() => null),
+        ]);
+
+        const badge = document.getElementById('voiceStatusBadge');
+        if (badge && healthRes && healthRes.ok) {
+          const health = await healthRes.json();
+          if (health.data?.status === 'connected') {
+            const engineLabel = health.data.engine === 'cit-voice-studio' ? 'CIT LOCAL (:8001)' : 'VOICESTUDIO (:3900)';
+            badge.innerText = engineLabel;
+            badge.style.background = 'rgba(34, 197, 94, 0.2)';
+            badge.style.color = '#22c55e';
+          } else {
+            badge.innerText = 'CHIME FALLBACK';
+            badge.style.background = 'rgba(234, 179, 8, 0.2)';
+            badge.style.color = '#eab308';
+          }
+        }
+
+        if (voicesRes && voicesRes.ok) {
+          const json = await voicesRes.json();
+          const voices = json.data || [];
+          if (voices.length > 0) {
+            const select = document.getElementById('voiceSelect');
+            if (select) {
+              const currentVal = select.value;
+              select.innerHTML = voices.map(v => {
+                const flag = v.language === 'en' ? '🇺🇸' : '🇻🇳';
+                return `<option value="${escapeHtml(v.id)}">${flag} ${escapeHtml(v.name)}</option>`;
+              }).join('');
+              if (currentVal && voices.some(v => v.id === currentVal)) {
+                select.value = currentVal;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('initVoiceStudio error:', err);
+      }
+    }
+
+    initVoiceStudio();
+
+    async function testVoiceTts() {
+      const voice = document.getElementById('voiceSelect')?.value || 'Minh Đức';
+      const isEnglish = voice.startsWith('en');
+      const sampleText = isEnglish
+        ? 'Thank you for watching our TikTok live stream!'
+        : 'Cảm ơn bạn đã xem buổi phát trực tiếp trên TikTok! Chúc bạn xem live vui vẻ!';
+      await playAudioFromTts(sampleText, voice);
+    }
+
+    async function playVoiceAlert(eventType, eventData) {
+      const voice = document.getElementById('voiceSelect')?.value || 'vi_female';
+      try {
+        const apiKey = document.getElementById('apiKeyInput')?.value || '';
+        const res = await fetch('/api/v1/voice/alert', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(apiKey ? { 'Authorization': 'Bearer ' + apiKey } : {}),
+          },
+          body: JSON.stringify({
+            eventType,
+            eventData,
+            voice,
+          }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data?.audioBase64) {
+            const snd = new Audio(json.data.audioBase64);
+            snd.play().catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('Voice alert playback error:', err);
+      }
+    }
+
+    async function playAudioFromTts(text, voice) {
+      try {
+        const apiKey = document.getElementById('apiKeyInput')?.value || '';
+        const res = await fetch('/api/v1/voice/tts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(apiKey ? { 'Authorization': 'Bearer ' + apiKey } : {}),
+          },
+          body: JSON.stringify({ text, voice }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data?.audioBase64) {
+            const snd = new Audio(json.data.audioBase64);
+            snd.play().catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('TTS playback error:', err);
+      }
     }
   </script>
 </body>

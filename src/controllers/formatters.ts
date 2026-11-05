@@ -46,5 +46,6 @@ export function formatSession(session: LiveSession | null | undefined): any {
     startedAt: session.startedAt ? session.startedAt.toISOString() : null,
     endedAt: session.endedAt ? session.endedAt.toISOString() : null,
     createdAt: session.createdAt.toISOString(),
+    metadata: (session.connectorMetadata as any) ?? {},
   };
 }

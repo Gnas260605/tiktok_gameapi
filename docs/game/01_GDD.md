@@ -291,3 +291,39 @@ Phạm vi: mặc định toàn thời gian của tenant; có thêm `scope=sessio
 ## 12. Ngoài phạm vi v1
 
 Hộ pháp (người khác tặng quà cho phiên độ kiếp của bạn), tông môn/bang hội, PvP, vật phẩm/đan dược, cảnh giới sau Đại Thừa, đổi tu vi ra phần thưởng thật. Ghi lại đây để không ai "tiện tay" làm trước.
+
+## 13. Nhiều người chơi cùng lúc
+
+Gameplay vốn đã nhiều người: mỗi người xem có nhân vật riêng, quà của ai cộng cho người đó, backend xử lý song song (Architecture §4). Phần cần thiết kế là **ai được hiển thị ở đâu** trên màn hình 720×1280 khi có hàng trăm người. Bố cục: Asset Guidelines §6.
+
+### 13.1 Ba vùng hiển thị
+
+| Vùng | Sức chứa | Ai được vào | Rời khi |
+|---|---|---|---|
+| Đài cao | 3 | Top 3 "Top cảnh giới" (toàn thời gian, chỉ tính người đang hoạt động trong buổi; nếu < 3 thì lấy top toàn thời gian) | Bị vượt hạng |
+| Bậc thềm | 12 | Người có sự kiện gần nhất (quà, lên tầng, lệnh `thongtin`) | Bị người mới đẩy ra; giữ chỗ tối thiểu 20s |
+| Linh quang | 60 | Mọi người hoạt động trong 5 phút còn lại | Không hoạt động 5 phút |
+
+"Hoạt động" = có chat, quà hoặc lệnh trong `activeWindowSeconds` (mặc định 300).
+
+Luật thay ghế ở bậc thềm: người mới vào ghế trống; hết ghế thì thay người **lâu chưa hoạt động nhất đã ngồi ≥ 20s**; nếu tất cả đều ngồi < 20s thì người mới xếp hàng chờ (tối đa 10, thừa thì chỉ hiện ở luồng thông báo). Quà ≥ 100💎 được chen hàng.
+
+### 13.2 Gộp sự kiện khi đông
+
+- Quà của cùng một người trong 1,5s được gộp thành một thẻ: "Lan ×5 quà · +3.200 tu vi".
+- Lên nhiều tầng trong một lần → một thẻ "Kim Đan 3 → 7".
+- Nhập môn: > 5 người trong 3s → một thẻ "12 đạo hữu vừa nhập môn" + đốm linh quang bay vào.
+- Hiệu ứng toàn màn hình (spotlight, đột phá): một hàng đợi chung, tối đa 1 cái cùng lúc, ưu tiên: đột phá > độ kiếp bắt đầu > quà ≥ 1.000💎 > lên ≥ 3 tầng.
+
+### 13.3 Ai quyết định
+
+Việc xếp chỗ là **hiển thị**, không ảnh hưởng gameplay nên do overlay tính. Backend cung cấp dữ liệu: `GET /api/v1/game/state` trả `activePlayers` (tối đa 75 người hoạt động gần nhất, kèm `lastActiveAt`) và top 3; frame `game.*` cập nhật dần. Hai overlay mở cùng lúc có thể xếp ghế khác nhau một chút — chấp nhận được.
+
+### 13.4 Cấu hình thêm
+
+| Khóa | Mặc định |
+|---|---|
+| `activeWindowSeconds` | 300 |
+| `stepSeats` | 12 (6–18) |
+| `maxSpiritLights` | 60 |
+| `seatMinHoldSeconds` | 20 |

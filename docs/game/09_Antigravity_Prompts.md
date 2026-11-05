@@ -186,10 +186,16 @@ Lát 3. Khung 720×1280, ?transparent=1, safe zone 80px dưới, không thanh cu
 Lát 4. Kết nối: API key scope game:overlay nhập một lần (localStorage, KHÔNG để trong URL)
        → POST /api/v1/realtime/tickets → /ws authenticate → subscribe sessionId;
        mất kết nối → ticket mới → GET /api/v1/game/state → bỏ frame seq ≤ lastSeq.
-Lát 5. Spotlight nhân vật (layer: aura, thân, orb), thẻ người chơi, thanh tu vi tabular-nums,
-       luồng thông báo ≤ 3 thẻ, bảng xếp hạng xoay 15s.
-Lát 6. Animation 8 trạng thái (§2.3), hàng đợi: ≤ 1 hiệu ứng toàn màn hình cùng lúc.
-       Màn độ kiếp: đồng hồ 30s, tỷ lệ % cỡ chữ lớn nhất. prefers-reduced-motion + effectsEnabled.
+Lát 5. Quảng trường tông môn nhiều người chơi (08 §6, GDD §13): background 5 lớp parallax (08 §9),
+       đài cao 3 người, bậc thềm 12 ghế, linh quang ≤ 60 đốm; luật thay ghế + gộp sự kiện GDD §13.1–13.2;
+       thẻ người chơi, thanh tu vi tabular-nums, luồng thông báo ≤ 3 thẻ, bảng xếp hạng xoay 15s.
+       Vẽ bằng MỘT canvas + sprite atlas; DOM chỉ cho chữ.
+Lát 6. Aura theo tu vi (08 §10): ghép layer base/ring/particle/linh thú theo cảnh giới × tầng × hạng,
+       LOD theo vùng, trần 120 hạt. Animation 8 trạng thái (§2.3), hàng đợi ≤ 1 hiệu ứng toàn màn hình.
+Lát 6b. Độ kiếp (08 §11): mây xoáy, sét vẽ thủ tục trên canvas (bolt PNG chỉ dự phòng), số đạo sét
+       và màu theo cảnh giới, kim quang khi có quà, biên đạo 30s khớp frame breakthrough.resolved,
+       nhiều phiên đồng thời (1 toàn màn hình + mini tại ghế). Không chớp > 3 lần/giây.
+       prefers-reduced-motion + effectsLevel (full | lite | off).
 Lát 7. ?demo: dùng POST /api/v1/game/demo/simulate (MockConnector), không tự tính kết quả ở client.
 MỌI text từ chat/nickname render bằng textContent, KHÔNG innerHTML.
 

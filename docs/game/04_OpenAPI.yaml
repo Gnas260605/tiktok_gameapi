@@ -879,7 +879,17 @@ components:
         activeBreakthroughs:
           type: array
           items: { $ref: '#/components/schemas/Breakthrough' }
-        spotlightPlayer: { oneOf: [{ $ref: '#/components/schemas/Player' }, { type: 'null' }] }
+        topPlayers:
+          type: array
+          maxItems: 3
+          description: Đài cao — top 3 cảnh giới (GDD §13.1)
+          items: { $ref: '#/components/schemas/Player' }
+        activePlayers:
+          type: array
+          maxItems: 75
+          description: Người hoạt động trong activeWindowSeconds, mới nhất trước (bậc thềm + linh quang)
+          items: { $ref: '#/components/schemas/Player' }
+        activePlayerCount: { type: integer }
         leaderboards:
           type: array
           items: { $ref: '#/components/schemas/Leaderboard' }
@@ -903,6 +913,11 @@ components:
         pendingGiftTtlHours: { type: integer, minimum: 1, maximum: 720 }
         defaultGender: { $ref: '#/components/schemas/Gender' }
         commandCooldownSeconds: { type: integer, minimum: 0, maximum: 300 }
+        activeWindowSeconds: { type: integer, minimum: 60, maximum: 3600 }
+        stepSeats: { type: integer, minimum: 6, maximum: 18 }
+        maxSpiritLights: { type: integer, minimum: 0, maximum: 150 }
+        seatMinHoldSeconds: { type: integer, minimum: 5, maximum: 120 }
+        effectsLevel: { type: string, enum: [full, lite, off], description: 'Thay effectsEnabled khi cần chế độ lite' }
 
     GameConfig:
       type: object

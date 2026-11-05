@@ -115,6 +115,11 @@ Lát 5. BreakthroughService: điều kiện GDD §7.1 trong một transaction; c
        thứ tự khóa game_players → breakthrough_sessions; rng inject qua DI.
 Lát 6. BreakthroughScheduler: timer, recover() lúc khởi động,
        UPDATE ... WHERE status='preparing' RETURNING để resolve đúng một lần.
+Lát 6b. Linh khí miễn phí + hộ pháp (GDD §14, Architecture §12): bảng activity_rewards,
+       player_daily_rewards, GameplayService.grantActivity() có trần nguồn/ngày/chuỗi điểm danh,
+       BreakthroughService.addCrowdSupport(). Test TC-F01, F03–F05, F09–F12.
+Lát 6c. VoiceDirector + ITtsProvider + MockTtsProvider + voice_clips + GET /voice/{clipId} +
+       POST /admin/voice/preview (GDD §16, Architecture §13). Test TC-V01..V06.
 Lát 7. LeaderboardService 5 bảng, khóa phụ theo GDD §9, dense rank, cache 2s.
 Lát 8. Controllers theo 04_OpenAPI.yaml (envelope success/error như code hiện có, BIGINT
        trả string, cursor pagination, requireScope('game:overlay'|'game:admin'),
@@ -154,6 +159,10 @@ Lát 5. Gift handler: idempotency_key = "gift:v1:" + (messageId/sourceEventId | 
        unjoined / unpriced / disabled. Gọi GameplayService của A2, không tự tính tu vi.
 Lát 6. Reconciler: mỗi GAME_RECONCILE_INTERVAL_MS và lúc khởi động, tìm events gift trong 24h
        không có gift_transactions (LEFT JOIN event_id) → đưa lại processor.
+Lát 6b. Sự kiện miễn phí: LikeAggregator (gộp 3s theo người), follow/share/member/chat thường →
+       ActivityIntent, cập nhật last_interaction_at gộp 10s, PresenceTicker mỗi 60s; khóa idempotency
+       đúng bảng Architecture §12; chuyển like/share/quà người khác sang hộ pháp khi có phiên preparing.
+       Test TC-F02, F06–F08.
 Lát 7. GameRealtimeGateway: phát frame game.* (bảng ở 05_Architecture §6) SAU COMMIT, kèm seq;
        throttle leaderboard.updated 2s/bảng.
 
@@ -196,6 +205,10 @@ Lát 6b. Độ kiếp (08 §11): mây xoáy, sét vẽ thủ tục trên canvas 
        và màu theo cảnh giới, kim quang khi có quà, biên đạo 30s khớp frame breakthrough.resolved,
        nhiều phiên đồng thời (1 toàn màn hình + mini tại ghế). Không chớp > 3 lần/giây.
        prefers-reduced-motion + effectsLevel (full | lite | off).
+Lát 6c. Linh khí miễn phí trên màn hình: số tu vi nhỏ bay lên (gộp 1,5s), thanh hộ pháp khi độ kiếp
+       ("Cả phòng tap tim hộ pháp!"), thông báo chạm trần ngày (GDD §15.2).
+       VoicePlayer: hàng đợi ≤ 3, cách 1,5s, giảm nhạc nền 30%, speechSynthesis vi-VN hoặc <audio>
+       audioUrl; SFX + nhạc nền theo 08 §12. Kiểm tra trong OBS với "Control audio via OBS".
 Lát 7. ?demo: dùng POST /api/v1/game/demo/simulate (MockConnector), không tự tính kết quả ở client.
 MỌI text từ chat/nickname render bằng textContent, KHÔNG innerHTML.
 
@@ -224,6 +237,8 @@ NHIỆM VỤ:
    Xuất: số buổi LIVE để đạt từng cảnh giới, số lần độ kiếp trung bình, tu vi mất do thất bại.
 2. Đề xuất 2 preset cấu hình: "Mặc định" và "Phòng nhỏ" (RealmBase ÷10), giải thích đánh đổi.
 3. Kiểm tra mục tiêu GDD §11: ≥40% người tham gia lên ít nhất 1 tầng trong buổi đầu.
+3b. Kiểm tra mục tiêu nhịp độ GDD §15.1 và trần linh khí miễn phí §14 với 3 hồ sơ; thêm hồ sơ
+   "chỉ tap + xem 60 phút/buổi". Đề xuất chỉnh freeUnits / freeDailyCapUnits nếu lệch.
 4. Kiểm tra bảng ChanceBpPer100Diamonds: chi phí "mua" +1% không rẻ hơn tu vi đã đầu tư
    ở cảnh giới đó.
 5. Mọi thay đổi số liệu: cập nhật GDD + seed + báo A2 và A6 (test có thể đổi kỳ vọng).
@@ -246,10 +261,10 @@ thường lúc đầu), rồi chạy lại khi nhận bàn giao.
 
 THEO PHASE:
 - P2: TC-L*, seed check 8 realms / 80 levels, TC-J04.
-- P3: TC-J*, TC-G* (đặc biệt G09 publish lại 100 lần, G13 kill trước khi xử lý + reconciler).
-- P4: TC-B* (B15/B16 kill-restart giữa phiên), TC-R*.
+- P3: TC-J*, TC-G*, TC-F02, F06–F08 (đặc biệt G09 publish lại 100 lần, G13 kill trước khi xử lý + reconciler).
+- P4: TC-B* (B15/B16 kill-restart giữa phiên), TC-R*, TC-F01, F03–F05, F09–F13, TC-V01..V06.
 - P6–P7: TC-O* trên trình duyệt, TC-D*.
-- P8: tests/game/e2e/tutien-acceptance.test.ts (AC-01..AC-14 ở TestPlan §4);
+- P8: tests/game/e2e/tutien-acceptance.test.ts (AC-01..AC-17 ở TestPlan §4);
   load TC-M01..M03 (200 gift/s × 60s, đối soát: tổng tu vi lý thuyết = tổng thực tế,
   0 giao dịch trùng); regression `pnpm test` toàn bộ.
 

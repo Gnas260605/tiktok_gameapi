@@ -8,7 +8,7 @@
 1. Mọi bảng mới có `tenant_id` và `@@unique([tenantId, id])`; quan hệ giữa các bảng dùng **FK tổ hợp** `[tenant_id, x_id] → [tenant_id, id]` như bảng `events` đang làm. PostgreSQL chặn tham chiếu chéo tenant.
 2. Tiền tệ game (tu vi, kim cương) dùng `BIGINT`. Tỷ lệ dùng **basis points** `INT` (9500 = 95,00%).
 3. Nhân vật gắn với `users` (định danh 3 mức đã có), không gắn với `live_sessions` — tiến trình sống qua nhiều buổi LIVE.
-4. Mọi thay đổi `current_exp` đều có một dòng `gift_transactions` hoặc `admin_audit_logs` giải thích nó (NFR-06).
+4. Mọi thay đổi `current_exp` đều có một dòng `gift_transactions`, `activity_rewards` hoặc `admin_audit_logs` giải thích nó (NFR-06).
 5. Idempotency nằm ở **ràng buộc unique của DB**, không ở cache trong bộ nhớ (cache dedup hiện có của `EventIngestionService` mất khi restart).
 
 ## 2. Sơ đồ
@@ -26,6 +26,8 @@ erDiagram
     breakthrough_sessions ||--o{ gift_transactions : "bonus gifts"
     breakthrough_sessions ||--o| breakthrough_history : "result"
     game_players ||--o{ game_events : emits
+    game_players ||--o{ activity_rewards : earns
+    game_players ||--o{ player_daily_rewards : caps
     tenants ||--o{ game_configurations : configures
     tenants ||--o{ admin_audit_logs : records
 
@@ -131,6 +133,10 @@ erDiagram
 | `cultivation_reached_at` | timestamptz | NOT NULL | Đổi khi `total_cultivation` đổi |
 | `gifts_reached_at` | timestamptz | NOT NULL | Đổi khi `total_diamonds_gifted` đổi |
 | `gender_changed_at` | timestamptz | NULL | Cooldown 24h |
+| `checkin_streak` | smallint | NOT NULL DEFAULT 0 | Số ngày điểm danh liên tiếp (GDD §14.1) |
+| `last_checkin_day` | date | NULL | Ngày theo `gameTimezone` |
+| `follow_rewarded_at` | timestamptz | NULL | Thưởng follow 1 lần trọn đời |
+| `last_interaction_at` | timestamptz | NULL | Dùng cho tĩnh tọa và vùng hiển thị |
 | `status` | enum `player_status` (`active`,`banned`) | DEFAULT `active` | |
 | `version` | int | NOT NULL DEFAULT 0 | Tăng mỗi lần ghi; Admin PATCH dùng để chống ghi đè |
 | `joined_at`, `last_active_at`, `created_at`, `updated_at` | timestamptz | | |
@@ -182,7 +188,7 @@ Engine đọc cả 80 dòng vào cache theo tenant (bust khi Admin sửa).
 | `total_diamonds` | bigint | |
 | `cultivation_received` | bigint DEFAULT 0 | |
 | `chance_bonus_bp` | int DEFAULT 0 | |
-| `transaction_type` | enum `gift_tx_type` | `cultivation`, `breakthrough_bonus`, `cultivation_and_bonus`, `unjoined_pending`, `unpriced`, `ignored_game_disabled`, `overflow_capped`, `admin_adjustment` |
+| `transaction_type` | enum `gift_tx_type` | `cultivation`, `breakthrough_bonus`, `cultivation_and_bonus`, `crowd_bonus`, `unjoined_pending`, `unpriced`, `ignored_game_disabled`, `overflow_capped`, `admin_adjustment` |
 | `status` | enum `gift_tx_status` | `applied`, `pending`, `failed`, `expired` |
 | `realm_before`, `level_before`, `exp_before`, `realm_after`, `level_after`, `exp_after` | smallint/bigint NULL | Ảnh chụp trước/sau để truy vết |
 | `error_message` | text NULL | |
@@ -201,6 +207,9 @@ Index: `(tenant_id, player_id, created_at DESC)`, `(tenant_id, status) WHERE sta
 | `base_chance_bp`, `max_chance_bp` | int | Chụp từ cấu hình |
 | `bonus_diamonds` | bigint DEFAULT 0 | |
 | `gift_bonus_bp` | int DEFAULT 0 | |
+| `crowd_bonus_bp` | int DEFAULT 0 | Hộ pháp của cả phòng, ≤ `crowdBonusMaxBp` |
+| `crowd_likes`, `crowd_shares` | int DEFAULT 0 | Đếm để tính hộ pháp |
+| `top_supporter_player_id` | uuid NULL | Người hộ pháp nhiều nhất |
 | `final_chance_bp` | int NULL | Ghi khi resolve |
 | `status` | enum `breakthrough_status` | `preparing`, `resolving`, `succeeded`, `failed`, `cancelled` |
 | `config_snapshot` | jsonb | penalty, cooldown, addExp…, lúc bắt đầu |
@@ -222,6 +231,33 @@ CREATE INDEX breakthrough_due ON breakthrough_sessions (ends_at)
 ### 3.6 `breakthrough_history`
 
 Bản ghi bất biến của kết quả: `id`, `tenant_id`, `player_id`, `session_id` (**UNIQUE** — đảm bảo resolve một lần), `result` (`success`/`failure`), `roll` int (0–9999), `final_chance_bp`, `cultivation_penalty` bigint, `exp_before`, `exp_after`, `realm_before`, `realm_after`, `created_at`.
+
+### 3.6b `activity_rewards` (tu vi miễn phí, GDD §14)
+
+| Cột | Kiểu | Ghi chú |
+|---|---|---|
+| `id` | uuid PK | |
+| `tenant_id`, `player_id`, `live_session_id` | uuid | FK tổ hợp; `live_session_id` NULL được |
+| `source` | enum `reward_source` | `join`, `follow`, `checkin`, `presence`, `like`, `chat`, `share` |
+| `idempotency_key` | varchar(160) | **`UNIQUE (tenant_id, idempotency_key)`** — dạng khóa ở Architecture §12 |
+| `event_id` | uuid NULL | FK `events` (NULL với `presence` vì do máy chủ tự sinh) |
+| `day_key` | date | Ngày theo `gameTimezone` |
+| `units_requested` | int | Trước khi áp trần |
+| `units_granted` | int | Sau khi áp trần (có thể 0) |
+| `free_scale` | numeric(8,2) | Chụp lúc cộng |
+| `cultivation_received` | bigint | `units_granted × free_scale` (floor) |
+| `quantity` | int DEFAULT 1 | Số tap đã gộp (với `like`) |
+| `created_at` | timestamptz | |
+
+Index: `(tenant_id, player_id, created_at DESC)`. Retention bằng `tenant_settings.event_retention_days`; số tổng vẫn nằm trong `player_daily_rewards` và `game_players`.
+
+### 3.6c `player_daily_rewards` (đếm trần ngày)
+
+PK `(tenant_id, player_id, day_key, source)`; `units` int, `count` int, `updated_at`. Cộng bằng `INSERT … ON CONFLICT DO UPDATE SET units = units + $n` **trong cùng transaction** với `activity_rewards`, sau khi đã `SELECT … FOR UPDATE` dòng `game_players`. Trần tổng ngày = `SUM(units)` các nguồn có tính trần.
+
+### 3.6d `voice_clips` (bộ đệm TTS, chỉ khi `voiceProvider = cloud`)
+
+`id` uuid, `tenant_id`, `text_hash` char(64) (`sha256(provider|voice|rate|text)`), `UNIQUE (tenant_id, text_hash)`, `storage_path` text, `mime` varchar(40), `bytes` int, `duration_ms` int, `last_used_at`, `created_at`. Dọn file không dùng sau 30 ngày.
 
 ### 3.7 `game_configurations`
 

@@ -291,3 +291,20 @@ Nhiều người độ kiếp cùng lúc (tối đa `maxConcurrentBreakthroughs`
 - [ ] Bộ sét: vortex, 4 bolt dự phòng, impact, shield
 - [ ] 60fps với 3 người đài cao + 12 bậc thềm + 60 linh quang + 1 phiên độ kiếp (Performance panel)
 - [ ] Không chớp sáng quá 3 lần/giây (an toàn cho người nhạy cảm ánh sáng)
+
+## 12. Âm thanh
+
+| File | Dùng | Thời lượng |
+|---|---|---|
+| `sfx-gift-small.ogg`, `sfx-gift-large.ogg` | Nhận quà nhỏ / lớn | ≤ 1,5s |
+| `sfx-levelup.ogg` | Lên tầng | ≤ 1,5s |
+| `sfx-thunder-1..3.ogg` | Mỗi đạo sét độ kiếp | ≤ 2s |
+| `sfx-shield.ogg` | Kim quang hộ thể | ≤ 1s |
+| `sfx-breakthrough.ogg`, `sfx-fail.ogg` | Kết quả độ kiếp | ≤ 4s |
+| `sfx-tap-sparkle.ogg` | Linh khí từ tap (phát tối đa 2 lần/giây) | ≤ 0,3s |
+| `bgm-sect-loop.ogg` | Nhạc nền tông môn, lặp liền mạch | 2–3 phút |
+
+- OGG Vorbis 128 kbps (+ bản MP3 dự phòng), chuẩn hóa −16 LUFS; voice luôn to hơn SFX, SFX to hơn nhạc nền.
+- Thứ tự âm lượng mặc định: voice 0,9 · SFX 0,6 · nhạc nền 0,25 (giảm còn 30% khi voice đang đọc).
+- Mọi âm thanh và nhạc phải có quyền sử dụng trên LIVE (tự làm, mua giấy phép, hoặc thư viện miễn phí bản quyền cho phép dùng thương mại). Nhạc có bản quyền dễ khiến TikTok tắt tiếng hoặc gỡ LIVE.
+- Giọng đọc cloud: chọn giọng vi-VN tự nhiên, nghe thử bằng `POST /admin/voice/preview` trước buổi LIVE.

@@ -210,6 +210,83 @@ paths:
                         items: { $ref: '#/components/schemas/Breakthrough' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /api/v1/game/players/{playerId}/activity-rewards:
+    get:
+      tags: [Players]
+      summary: Lịch sử tu vi miễn phí (tap, follow, share, xem, chat)
+      operationId: listPlayerActivityRewards
+      parameters:
+        - { $ref: '#/components/parameters/PlayerId' }
+        - name: dayKey
+          in: query
+          schema: { type: string, format: date }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/ActivityReward' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/game/voice/{clipId}:
+    get:
+      tags: [Overlay]
+      summary: File âm thanh TTS đã tổng hợp (provider cloud)
+      operationId: getVoiceClip
+      parameters:
+        - name: clipId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Âm thanh
+          content:
+            audio/mpeg: { schema: { type: string, format: binary } }
+            audio/ogg: { schema: { type: string, format: binary } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/game/admin/voice/preview:
+    post:
+      tags: [Admin]
+      summary: Nghe thử một câu voice với cấu hình hiện tại
+      operationId: previewVoice
+      x-required-scope: game:admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lineId]
+              properties:
+                lineId: { type: string, examples: ['breakthrough.succeeded'] }
+                sampleName: { type: string, maxLength: 40, default: 'Đạo hữu' }
+      responses:
+        '200':
+          description: Câu đã chèn tên + audioUrl (nếu cloud)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          text: { type: string }
+                          audioUrl: { type: [string, 'null'] }
+
   /api/v1/game/leaderboards/{board}:
     get:
       tags: [Leaderboards]
@@ -771,6 +848,9 @@ components:
         breakthroughSuccessCount: { type: integer }
         breakthroughFailCount: { type: integer }
         breakthroughCooldownUntil: { type: [string, 'null'], format: date-time }
+        checkinStreak: { type: integer }
+        freeUnitsToday: { type: integer, description: 'Đơn vị linh khí miễn phí đã nhận hôm nay' }
+        freeCapToday: { type: integer, description: 'Trần hôm nay (đã gồm thưởng chuỗi điểm danh)' }
         characterAsset: { $ref: '#/components/schemas/AssetName' }
         status: { type: string, enum: [active, banned] }
         version: { type: integer }
@@ -791,7 +871,7 @@ components:
 
     GiftTxType:
       type: string
-      enum: [cultivation, breakthrough_bonus, cultivation_and_bonus, unjoined_pending, unpriced, ignored_game_disabled, overflow_capped, admin_adjustment]
+      enum: [cultivation, breakthrough_bonus, cultivation_and_bonus, crowd_bonus, unjoined_pending, unpriced, ignored_game_disabled, overflow_capped, admin_adjustment]
 
     GiftTransaction:
       type: object
@@ -834,6 +914,7 @@ components:
         status: { type: string, enum: [preparing, resolving, succeeded, failed, cancelled] }
         baseChanceBp: { type: integer }
         giftBonusBp: { type: integer }
+        crowdBonusBp: { type: integer, description: 'Hộ pháp của cả phòng (GDD §14.2)' }
         currentChanceBp: { type: integer, description: 'min(base + bonus, max) — cập nhật trực tiếp khi preparing' }
         maxChanceBp: { type: integer }
         finalChanceBp: { type: [integer, 'null'] }
@@ -918,6 +999,52 @@ components:
         maxSpiritLights: { type: integer, minimum: 0, maximum: 150 }
         seatMinHoldSeconds: { type: integer, minimum: 5, maximum: 120 }
         effectsLevel: { type: string, enum: [full, lite, off], description: 'Thay effectsEnabled khi cần chế độ lite' }
+        freeEnabled: { type: boolean }
+        freeScaleGrowth: { type: number, minimum: 1, maximum: 3 }
+        freeDailyCapUnits: { type: integer, minimum: 0, maximum: 100000 }
+        freeStreakBonusPerDay: { type: number, minimum: 0, maximum: 1 }
+        freeStreakBonusMax: { type: number, minimum: 0, maximum: 5 }
+        freeUnits:
+          type: object
+          additionalProperties: false
+          properties:
+            join: { type: integer, minimum: 0 }
+            follow: { type: integer, minimum: 0 }
+            checkin: { type: integer, minimum: 0 }
+            presencePerMinute: { type: integer, minimum: 0 }
+            presenceMaxMinutes: { type: integer, minimum: 0, maximum: 1440 }
+            like: { type: integer, minimum: 0 }
+            likeDailyMax: { type: integer, minimum: 0 }
+            chat: { type: integer, minimum: 0 }
+            chatCooldownSeconds: { type: integer, minimum: 0 }
+            chatDailyMax: { type: integer, minimum: 0 }
+            share: { type: integer, minimum: 0 }
+            shareDailyMax: { type: integer, minimum: 0 }
+        presenceActivityWindowSeconds: { type: integer, minimum: 60, maximum: 3600 }
+        weakIdentityFreeRatio: { type: number, minimum: 0, maximum: 1 }
+        crowdBonusMaxBp: { type: integer, minimum: 0, maximum: 5000 }
+        crowdBpPer100Likes: { type: integer, minimum: 0, maximum: 1000 }
+        crowdBpPerShare: { type: integer, minimum: 0, maximum: 1000 }
+        crowdOtherGiftRatio: { type: number, minimum: 0, maximum: 1 }
+        gameTimezone: { type: string, examples: ['Asia/Ho_Chi_Minh'] }
+        voiceEnabled: { type: boolean }
+        voiceProvider: { type: string, enum: [browser, cloud] }
+        voiceName: { type: string }
+        voiceRate: { type: number, minimum: 0.5, maximum: 2 }
+        voiceVolume: { type: number, minimum: 0, maximum: 1 }
+        voiceGiftThreshold: { type: integer, minimum: 1 }
+        voiceEvents:
+          type: object
+          additionalProperties: { type: boolean }
+        voiceLines:
+          type: object
+          description: lineId → danh sách biến thể câu, chứa {name}, {realm}, {gift}, {n}
+          additionalProperties:
+            type: array
+            items: { type: string, maxLength: 200 }
+        voiceBlocklist:
+          type: array
+          items: { type: string, maxLength: 40 }
 
     GameConfig:
       type: object
@@ -925,6 +1052,19 @@ components:
         revision: { type: integer }
         values: { $ref: '#/components/schemas/GameConfigValues' }
         updatedAt: { type: string, format: date-time }
+
+    ActivityReward:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        playerId: { type: string, format: uuid }
+        source: { type: string, enum: [join, follow, checkin, presence, like, chat, share] }
+        dayKey: { type: string, format: date }
+        unitsRequested: { type: integer }
+        unitsGranted: { type: integer }
+        quantity: { type: integer }
+        cultivationReceived: { $ref: '#/components/schemas/BigIntString' }
+        createdAt: { type: string, format: date-time }
 
     AuditLog:
       type: object

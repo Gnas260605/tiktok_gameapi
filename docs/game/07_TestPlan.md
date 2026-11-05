@@ -70,10 +70,10 @@ Mỗi ca: **ID · Mức · Tiền điều kiện → Hành động → Kỳ vọ
 
 | ID | Mức | Kịch bản | Kỳ vọng |
 |---|---|---|---|
-| TC-L01 | U | LK3 2.000/3.000 + 500 | LK3 2.500/3.000 |
-| TC-L02 | U | LK3 2.500/3.000 + 500 | LK4 0/4.000 |
-| TC-L03 | U | LK3 2.500/3.000 + 1.000 (ví dụ spec) | LK4 500/4.000 |
-| TC-L04 | U | LK1 0 + 10.000 (Galaxy) | LK5 0/5.000; `levelsGained=[2,3,4,5]` |
+| TC-L01 | U | LK3 500/1.400 + 500 | LK3 1.000/1.400 |
+| TC-L02 | U | LK3 1.000/1.400 + 400 | LK4 0/1.600 |
+| TC-L03 | U | LK3 1.000/1.400 + 1.000; và preset "Spec tuyến tính": LK3 2.500/3.000 + 1.000 | LK4 600/1.600; preset: LK4 500/4.000 |
+| TC-L04 | U | LK1 0 + 10.000 (Galaxy) | LK7 1.000/2.200; `levelsGained=[2,3,4,5,6,7]` |
 | TC-L05 | U | LK9 + quà đủ qua tầng 10 rất nhiều | Dừng ở LK10; không sang Trúc Cơ; dư giữ lại (≤ trần) |
 | TC-L06 | U | Đạt đúng ngưỡng tầng 10 | `isMaxLevel=true`; frame `level.max` |
 | TC-L07 | U | Đại Thừa 10 nhận quà | `total_cultivation` tăng; không độ kiếp được |
@@ -139,6 +139,36 @@ Mỗi ca: **ID · Mức · Tiền điều kiện → Hành động → Kỳ vọ
 | TC-D07 | I | Mọi PATCH/reset/config | Có đúng 1 `admin_audit_logs` với before/after |
 | TC-D08 | A | Retry giao dịch `failed` | `applied`; retry lần 2 → 409 |
 
+### 3.7b Linh khí miễn phí (F)
+
+| ID | Mức | Kịch bản | Kỳ vọng |
+|---|---|---|---|
+| TC-F01 | I | Follow lần đầu | +500 × FreeScale; follow lại (event mới) → 0 |
+| TC-F02 | I | 1.000 tap trong 1 phút | Gộp ≤ 20 dòng `activity_rewards`; tổng tối đa 300 đơn vị |
+| TC-F03 | I | Đủ mọi nguồn trong ngày | Tổng đơn vị có trần = 1.000; vượt thì `units_granted = 0` |
+| TC-F04 | I | Điểm danh 6 ngày liên tiếp; bỏ 1 ngày | Trần 1.500; sau khi bỏ ngày → 1.000 |
+| TC-F05 | I | Đổi ngày lúc 00:00 `Asia/Ho_Chi_Minh` (giả lập đồng hồ) | Trần mới, chuỗi +1 |
+| TC-F06 | I | PresenceTicker: người tap 4 phút trước / 6 phút trước | Người đầu +8, người sau 0 |
+| TC-F07 | I | Hai PresenceTicker cùng chạy một phút | Đúng 1 dòng presence / người / phút |
+| TC-F08 | I | Chat thường 10 lần trong 30s | Chỉ 1 lần thưởng |
+| TC-F09 | I | Người `event_only` | 50% đơn vị; không có thưởng follow |
+| TC-F10 | I | Realm 3 nhận 100 đơn vị | +256 tu vi (FreeScale 2,56) |
+| TC-F11 | I | Độ kiếp: 1.000 tap cả phòng + 2 share + quà người khác 600💎 (Kim Đan) | crowd = min(200 + 200 + 501, 500) = 500 bp |
+| TC-F12 | I | Tap hộ pháp | Vẫn được tính linh khí cho người tap |
+| TC-F13 | U | Mô phỏng 30 ngày người miễn phí | Mục tiêu nhịp độ GDD §15.1 đạt |
+
+### 3.7c Voice (V)
+
+| ID | Mức | Kịch bản | Kỳ vọng |
+|---|---|---|---|
+| TC-V01 | U | Lọc tên: emoji, link, số điện thoại, tên 50 ký tự, từ trong blocklist | Theo GDD §16.2 |
+| TC-V02 | I | 30 người follow trong 10s | Đúng 1 frame `voice.say` gộp |
+| TC-V03 | I | 5 câu ưu tiên 3–4 + 1 câu ưu tiên 1 cùng lúc | Câu 1 đầu hàng; hàng đợi ≤ 3 |
+| TC-V04 | I | `voiceEnabled=false` / tắt riêng `gift.large` | Không có frame tương ứng |
+| TC-V05 | I | Cloud provider timeout | Frame không có `audioUrl`, overlay dùng giọng trình duyệt |
+| TC-V06 | I | Nội dung gửi tới `ITtsProvider` | Không bao giờ chứa nội dung bình luận |
+| TC-V07 | O | OBS "Control audio via OBS" | Âm thanh voice có trong mixer OBS |
+
 ### 3.8 Overlay (O) — trình duyệt thật (`browser-testing-with-devtools`)
 
 | ID | Kịch bản | Kỳ vọng |
@@ -172,6 +202,9 @@ Mỗi ca: **ID · Mức · Tiền điều kiện → Hành động → Kỳ vọ
 | AC-12 | Admin dashboard | D01, D07 |
 | AC-13 | Không cộng trùng gift | G09, G10 |
 | AC-14 | Không mất dữ liệu khi restart | G13, B15, B16 |
+| AC-15 | Tu vi miễn phí có trần ngày | F01, F03, F06 |
+| AC-16 | Hộ pháp cả phòng khi độ kiếp | F11 |
+| AC-17 | Voice đọc sự kiện đặc biệt | V02, V03, V07 |
 
 ## 5. Kiểm thử thủ công trước buổi LIVE thật
 
@@ -183,7 +216,7 @@ Mỗi ca: **ID · Mức · Tiền điều kiện → Hành động → Kỳ vọ
 
 ## 6. Tiêu chí thoát
 
-- 100% ca P0 (J, G, L, B, M04–M07, D) pass; 0 lỗi mức nghiêm trọng mở.
+- 100% ca P0 (J, G, L, B, F, V01–V06, M04–M07, D) pass; 0 lỗi mức nghiêm trọng mở.
 - Load M01–M03 đạt mục tiêu NFR.
 - Regression 200+ test hiện có xanh.
 - Coverage `src/services/game`: line ≥ 90%, `cultivation-engine.ts` branch ≥ 95%.

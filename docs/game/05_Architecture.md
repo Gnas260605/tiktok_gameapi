@@ -144,6 +144,8 @@ interface GameFrame<T extends string, P> {
 | `command.rejected` | `playerId, reason` | Thẻ ngắn lý do |
 | `leaderboard.updated` | `board, entries` (≤10) | Bảng xếp hạng (throttle 2s/bảng) |
 | `config.changed` | `flags` | Bật/tắt hiệu ứng |
+| `exp.gained` (source ≠ gift) | `playerId, source, amount, dailyUnits, dailyCap` | Số tu vi nhỏ bay lên, gộp 1,5s; báo khi chạm trần ngày |
+| `voice.say` | `lineId, text, priority, audioUrl?` | Đưa vào hàng đợi voice |
 
 Phát sau COMMIT (không bao giờ phát trạng thái chưa lưu). Reconnect: overlay xin ticket mới → `GET /api/v1/game/state` → so `lastSeq` → tiếp tục nghe; frame có `seq ≤ lastSeq` bị bỏ.
 
@@ -195,3 +197,53 @@ Gameplay (tỷ lệ, hệ số…) **không** nằm trong env — chỉ trong `g
 4. **ADR-G4**: Tỷ lệ dạng basis points, tu vi dạng BIGINT, JSON dạng string.
 5. **ADR-G5**: Overlay tĩnh (HTML/CSS/JS + Canvas/DOM) như `/game` — không thêm build tool frontend ở v1.
 6. **ADR-G6**: Một instance là đủ cho MVP; thiết kế vẫn an toàn khi chạy nhiều instance nhờ khóa DB.
+7. **ADR-G7**: Tap tim gộp trong bộ nhớ 3s (chấp nhận mất ≤ 3s tap khi crash); quà không bao giờ gộp (§12).
+8. **ADR-G8**: Backend chọn câu voice, overlay chỉ phát; TTS cloud sau interface `ITtsProvider` (§13).
+
+## 12. Linh khí miễn phí (like, follow, share, xem, chat)
+
+```text
+events (like | follow | share | member | chat)
+   └─▶ GameEventProcessor
+         ├─ like   → LikeAggregator: cộng dồn likeCount theo tenant:user trong 3s → 1 intent
+         ├─ follow / share / member / chat thường → ActivityIntent ngay
+         └─ mọi tương tác → cập nhật last_interaction_at (ghi gộp mỗi 10s)
+PresenceTicker (mỗi 60s, theo tenant có session connected):
+   chọn player có last_interaction_at ≥ now − 300s → ActivityIntent(presence)
+ActivityIntent → GameplayService.grantActivity():
+   BEGIN; INSERT activity_rewards (khóa idempotency) → trùng thì dừng
+   SELECT game_players FOR UPDATE
+   UPSERT player_daily_rewards, áp trần nguồn + trần ngày (+ chuỗi điểm danh)
+   applyExp(units_granted × FreeScale); INSERT game_events; COMMIT → frame exp.gained (source)
+```
+
+Khóa idempotency:
+
+| Nguồn | Khóa |
+|---|---|
+| `follow`, `join` | `follow:v1:<playerId>` / `join:v1:<playerId>` — trọn đời, nên follow lại không được thêm |
+| `checkin` | `checkin:v1:<playerId>:<dayKey>` |
+| `presence` | `presence:v1:<playerId>:<yyyyMMddHHmm>` — 2 instance chạy cùng lúc cũng chỉ cộng 1 lần/phút |
+| `share`, `chat` | `share:v1:<msgId hoặc fingerprint>`, `chat:v1:<msgId hoặc fingerprint>` |
+| `like` | `like:v1:<playerId>:<msgId đầu tiên của cửa sổ gộp>` |
+
+Đánh đổi đã chấp nhận: tap gộp trong bộ nhớ 3 giây, process chết thì mất tối đa 3 giây tap chưa ghi. Quà **không** bao giờ đi đường gộp này.
+
+Hộ pháp (GDD §14.2): khi có phiên `preparing`, cùng intent like/share/quà của người khác được chuyển thêm vào `BreakthroughService.addCrowdSupport()`, cộng `crowd_*` trên phiên trong transaction riêng, cũng khóa theo thứ tự player → session. Frame `breakthrough.bonus` mang `crowdBonusBp`.
+
+## 13. Voice (TTS)
+
+```text
+GameplayService ─ game_events ─▶ VoiceDirector (backend)
+   chọn sự kiện theo GDD §16.1, gộp follow/nhập môn 10s, lọc tên, chọn biến thể câu
+   └─▶ frame `voice.say` { lineId, text, priority, audioUrl? }
+Overlay VoicePlayer: hàng đợi ≤ 3, khoảng cách 1,5s, giảm nhạc nền 30%
+   provider browser → speechSynthesis (giọng vi-VN của máy)
+   provider cloud   → phát audioUrl bằng <audio>
+```
+
+- **Backend quyết định câu nào được đọc** (để mọi overlay đọc giống nhau và lọc tên ở một chỗ); overlay chỉ phát.
+- `ITtsProvider { synthesize(text, voice, rate): Promise<Buffer> }` — tách nhà cung cấp như `ITikTokLiveConnector`. `MockTtsProvider` trả file im lặng cho test. Nhà cung cấp cloud cụ thể (Google Cloud TTS, Azure, FPT.AI…) chọn sau; khóa API ở biến môi trường `TTS_API_KEY`, không lưu DB.
+- Cloud: tổng hợp **trước** khi gửi frame (timeout 2s; quá hạn thì gửi frame không có `audioUrl` để overlay dùng giọng trình duyệt). File lưu `voice_clips`, phục vụ qua `GET /api/v1/game/voice/{clipId}` (yêu cầu cùng API key overlay). Câu cố định ("Mười giây!") được đệm sẵn khi khởi động.
+- **OBS**: Browser Source phải bật "Control audio via OBS" để âm thanh vào luồng LIVE. `speechSynthesis` trong OBS không ổn định trên mọi máy, nên khuyến nghị `cloud` cho buổi LIVE thật và `browser` cho thử nghiệm.
+- Không gửi nội dung bình luận tới nhà cung cấp TTS; chỉ gửi câu mẫu đã chèn tên đã lọc.

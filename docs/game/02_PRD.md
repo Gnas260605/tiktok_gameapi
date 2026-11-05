@@ -43,6 +43,15 @@ Ký hiệu ưu tiên: **P0** = MVP bắt buộc, **P1** = nên có trong MVP, **
 | US-14 | Người chưa tham gia tặng quà vẫn được ghi nhận | P0 | Theo `autoJoinOnGift`; không có quà nào "biến mất" |
 | US-15 | Quà không có giá kim cương được ghi chờ xử lý | P1 | Giao dịch `unpriced`, Admin thấy trong danh sách lỗi |
 
+### 3.2b Tu vi miễn phí & voice
+
+| ID | Story | Ưu tiên | Tiêu chí chấp nhận |
+|---|---|---|---|
+| US-16 | Là người xem không tặng quà, tôi vẫn tăng tu vi khi xem, tap tim, bình luận, follow, share | P0 | Theo GDD §14.1; có trần ngày; follow chỉ thưởng 1 lần |
+| US-17 | Tôi lên tầng đầu tiên trong vài phút mà không cần tặng quà | P0 | Mục tiêu nhịp độ GDD §15.1 |
+| US-18 | Cả phòng tap tim / share để hộ pháp người đang độ kiếp | P0 | Hộ pháp ≤ +5%, hiện thanh hộ pháp trên overlay |
+| US-19 | Khoảnh khắc đặc biệt được đọc thành tiếng | P1 | Voice theo GDD §16, nghe được trong OBS, tắt được từng loại |
+
 ### 3.3 Độ kiếp
 
 | ID | Story | Ưu tiên | Tiêu chí chấp nhận |
@@ -102,6 +111,8 @@ Hoàn thành khi **tất cả** dòng dưới đây có test nghiệm thu pass (
 - [ ] LIVE overlay + 5 bảng xếp hạng
 - [ ] Admin dashboard
 - [ ] Không cộng trùng gift event, không mất dữ liệu khi restart
+- [ ] Tu vi miễn phí (xem, tap, follow, share, chat) có trần ngày + hộ pháp khi độ kiếp
+- [ ] Voice đọc các sự kiện đặc biệt
 
 ## 6. Ngoài phạm vi
 

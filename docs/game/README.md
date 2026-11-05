@@ -13,5 +13,6 @@ Game nhập vai tu tiên tương tác TikTok LIVE, chạy trên TikUser API. Spe
 | [07_TestPlan.md](07_TestPlan.md) | Ca kiểm thử, nghiệm thu E2E, tiêu chí thoát |
 | [08_Asset_Guidelines.md](08_Asset_Guidelines.md) | Quy chuẩn asset nhân vật, hiệu ứng, bảng màu, bố cục overlay |
 | [09_Antigravity_Prompts.md](09_Antigravity_Prompts.md) | Prompt cho Antigravity: 6 sub agent, A1 kiêm điều phối |
+| [10_Refactor_Prompt.md](10_Refactor_Prompt.md) | Prompt làm sạch & refactor codebase (Phase 0, trước Bước 2) |
 
 Thứ tự đọc cho agent mới: README gốc `CLAUDE.md` → 01 → 03 → 04 → 05 → mục của mình trong 06 → 07.

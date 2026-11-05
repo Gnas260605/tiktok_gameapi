@@ -279,6 +279,7 @@ Tiêu chí thoát: TestPlan §6 (100% P0 pass, load đạt NFR, coverage src/ser
 
 ```text
 Bước 1  A1 Audit                                         (một mình)
+Bước 1b Refactor Phase 0 (10_Refactor_Prompt.md)         (một mình, sau khi A1 được chấp nhận)
 Bước 2  A2 P2 lát 1–4   ‖  A5 mô phỏng  ‖  A6 viết test P2–P3  ‖  A4 P5
 Bước 3  A3 P3                         ‖  A6 viết test P4
 Bước 4  A2 P4                         ‖  A4 P6

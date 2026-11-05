@@ -1,0 +1,926 @@
+openapi: 3.1.0
+info:
+  title: TU TIÊN LIVE — Game API
+  version: 1.0.0
+  description: |
+    API của game TU TIÊN LIVE, chạy trên TikUser API (cùng Fastify app, cùng cơ chế API key,
+    cùng envelope `{ success, data, meta? }` / `{ success: false, error }`).
+
+    Quy tắc chung
+    - Mọi endpoint yêu cầu `Authorization: Bearer <key>` hoặc `X-API-Key`.
+    - Scope: `game:overlay` (chỉ đọc + bắt đầu độ kiếp từ overlay), `game:admin` (mọi thứ).
+      Key cũ có scope `*`.
+    - Tài nguyên của tenant khác → `404 NOT_FOUND` (không bao giờ 403).
+    - Danh sách dùng phân trang cursor: `?cursor=&limit=` → `meta.nextCursor`, `meta.hasMore`.
+    - Số BIGINT (tu vi, kim cương) trả về dạng **string** để không mất độ chính xác ở JS.
+    - Tỷ lệ trả về dạng basis points (`9500` = 95,00%).
+    - Lệnh chat TikTok và REST đi qua **cùng** `GameplayService`; REST không có logic riêng.
+
+    Realtime: frame `game.*` qua `/ws` hiện có (xem `05_Architecture.md` §6).
+servers:
+  - url: http://localhost:3000
+security:
+  - bearerAuth: []
+  - apiKeyHeader: []
+tags:
+  - name: Overlay
+  - name: Players
+  - name: Leaderboards
+  - name: Breakthroughs
+  - name: Admin
+  - name: Demo
+
+paths:
+  /api/v1/game/state:
+    get:
+      tags: [Overlay]
+      summary: Ảnh chụp trạng thái để overlay vẽ lại (khi mở hoặc sau reconnect)
+      operationId: getGameState
+      parameters:
+        - name: liveSessionId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/GameState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/game/realms:
+    get:
+      tags: [Overlay]
+      summary: 8 cảnh giới và 80 tầng (để overlay tính thanh tu vi)
+      operationId: listRealms
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Realm' }
+
+  /api/v1/game/players:
+    get:
+      tags: [Players]
+      summary: Danh sách / tìm kiếm người chơi
+      operationId: listPlayers
+      parameters:
+        - name: q
+          in: query
+          description: Tìm theo username hoặc nickname (không phân biệt hoa thường, không dấu)
+          schema: { type: string, maxLength: 64 }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Player' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/game/players/by-username/{username}:
+    get:
+      tags: [Players]
+      summary: Tra cứu theo TikTok username
+      operationId: getPlayerByUsername
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[A-Za-z0-9._]{1,64}$' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Player' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/game/players/{playerId}:
+    get:
+      tags: [Players]
+      summary: Thông tin người chơi
+      operationId: getPlayer
+      parameters: [{ $ref: '#/components/parameters/PlayerId' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Player' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/game/players/{playerId}/status:
+    get:
+      tags: [Players]
+      summary: Trạng thái gameplay (có thể độ kiếp? cooldown? phiên đang chạy?)
+      operationId: getPlayerStatus
+      parameters: [{ $ref: '#/components/parameters/PlayerId' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/PlayerStatus' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/game/players/{playerId}/gift-transactions:
+    get:
+      tags: [Players]
+      summary: Lịch sử quà của người chơi
+      operationId: listPlayerGiftTransactions
+      parameters:
+        - { $ref: '#/components/parameters/PlayerId' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/GiftTransaction' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/game/players/{playerId}/breakthroughs:
+    get:
+      tags: [Breakthroughs]
+      summary: Lịch sử độ kiếp của người chơi
+      operationId: listPlayerBreakthroughs
+      parameters:
+        - { $ref: '#/components/parameters/PlayerId' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Breakthrough' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/game/leaderboards/{board}:
+    get:
+      tags: [Leaderboards]
+      summary: Bảng xếp hạng (thứ tự xác định, dense rank)
+      operationId: getLeaderboard
+      parameters:
+        - name: board
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [realm, level, cultivation, breakthrough, gifts]
+        - name: scope
+          in: query
+          schema: { type: string, enum: [all, session], default: all }
+        - name: liveSessionId
+          in: query
+          description: Bắt buộc khi `scope=session`
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Leaderboard' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/game/breakthroughs:
+    post:
+      tags: [Breakthroughs]
+      summary: Bắt đầu độ kiếp (tương đương lệnh chat `do kiep`)
+      operationId: startBreakthrough
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Client tạo một lần cho một ý định, dùng lại khi retry. Cùng key + body khác → 422.
+          schema: { type: string, minLength: 8, maxLength: 120 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [playerId, liveSessionId]
+              properties:
+                playerId: { type: string, format: uuid }
+                liveSessionId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Phiên độ kiếp đã mở
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Breakthrough' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: |
+            Không đủ điều kiện. `error.details.reason` ∈
+            `NOT_MAX_LEVEL`, `NOT_ENOUGH_EXP`, `MAX_REALM`, `ALREADY_IN_PROGRESS`,
+            `COOLDOWN`, `TOO_MANY_CONCURRENT`, `GAME_DISABLED`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '422':
+          description: Idempotency-Key bị dùng lại với body khác
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+
+  /api/v1/game/breakthroughs/{breakthroughId}:
+    get:
+      tags: [Breakthroughs]
+      summary: Chi tiết một phiên độ kiếp
+      operationId: getBreakthrough
+      parameters:
+        - name: breakthroughId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Breakthrough' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Admin
+  /api/v1/game/admin/config:
+    get:
+      tags: [Admin]
+      summary: Đọc toàn bộ cấu hình gameplay
+      operationId: getGameConfig
+      x-required-scope: game:admin
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/GameConfig' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Admin]
+      summary: Cập nhật cấu hình (một phần), có kiểm tra revision
+      operationId: updateGameConfig
+      x-required-scope: game:admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [baseRevision, values]
+              properties:
+                baseRevision:
+                  type: integer
+                  description: Revision client đã đọc; lệch → 409
+                values: { $ref: '#/components/schemas/GameConfigValues' }
+      responses:
+        '200':
+          description: Đã lưu, trả cấu hình mới
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/GameConfig' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/game/admin/realms/{realmOrder}:
+    patch:
+      tags: [Admin]
+      summary: Sửa tỷ lệ / asset / tu vi yêu cầu từng tầng của một cảnh giới
+      operationId: updateRealm
+      x-required-scope: game:admin
+      parameters:
+        - name: realmOrder
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 8 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                baseChanceBp: { type: integer, minimum: 0, maximum: 10000 }
+                chanceBpPer100Diamonds: { type: integer, minimum: 0, maximum: 10000 }
+                characterMaleAsset: { $ref: '#/components/schemas/AssetName' }
+                characterFemaleAsset: { $ref: '#/components/schemas/AssetName' }
+                requiredExp:
+                  type: array
+                  minItems: 10
+                  maxItems: 10
+                  description: Tu vi yêu cầu tầng 1..10 (chuỗi số nguyên dương)
+                  items: { type: string, pattern: '^[1-9][0-9]{0,15}$' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Realm' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/v1/game/admin/players/{playerId}:
+    patch:
+      tags: [Admin]
+      summary: Điều chỉnh dữ liệu người chơi (ghi audit log)
+      operationId: adjustPlayer
+      x-required-scope: game:admin
+      parameters: [{ $ref: '#/components/parameters/PlayerId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, reason]
+              properties:
+                expectedVersion: { type: integer }
+                reason: { type: string, minLength: 5, maxLength: 500 }
+                realmOrder: { type: integer, minimum: 1, maximum: 8 }
+                level: { type: integer, minimum: 1, maximum: 10 }
+                currentExp: { type: string, pattern: '^[0-9]{1,16}$' }
+                gender: { type: string, enum: [male, female] }
+                clearCooldown: { type: boolean }
+                status: { type: string, enum: [active, banned] }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Player' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/game/admin/players/{playerId}/reset:
+    post:
+      tags: [Admin]
+      summary: Reset nhân vật về Luyện Khí 1 (cần xác nhận username)
+      operationId: resetPlayer
+      x-required-scope: game:admin
+      parameters: [{ $ref: '#/components/parameters/PlayerId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmUsername, reason]
+              properties:
+                confirmUsername: { type: string }
+                reason: { type: string, minLength: 5, maxLength: 500 }
+                keepTotals:
+                  type: boolean
+                  default: true
+                  description: Giữ total_cultivation / total_diamonds_gifted cho bảng xếp hạng
+      responses:
+        '200':
+          description: Đã reset; phiên độ kiếp đang chạy (nếu có) chuyển `cancelled`
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Player' }
+        '400':
+          description: confirmUsername không khớp
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/game/admin/gift-transactions:
+    get:
+      tags: [Admin]
+      summary: Tất cả giao dịch quà (lọc lỗi, chờ, chưa định giá)
+      operationId: listGiftTransactions
+      x-required-scope: game:admin
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [applied, pending, failed, expired] }
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/GiftTxType' }
+        - name: playerId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: liveSessionId
+          in: query
+          schema: { type: string, format: uuid }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/GiftTransaction' }
+
+  /api/v1/game/admin/gift-transactions/{transactionId}/retry:
+    post:
+      tags: [Admin]
+      summary: Xử lý lại giao dịch `failed` (idempotent; giao dịch `applied` → 409)
+      operationId: retryGiftTransaction
+      x-required-scope: game:admin
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/GiftTransaction' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/game/admin/breakthrough-history:
+    get:
+      tags: [Admin]
+      summary: Lịch sử độ kiếp toàn tenant
+      operationId: listBreakthroughHistory
+      x-required-scope: game:admin
+      parameters:
+        - name: result
+          in: query
+          schema: { type: string, enum: [success, failure] }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Breakthrough' }
+
+  /api/v1/game/admin/audit-logs:
+    get:
+      tags: [Admin]
+      summary: Nhật ký thao tác Admin (chỉ đọc)
+      operationId: listAuditLogs
+      x-required-scope: game:admin
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AuditLog' }
+
+  /api/v1/game/admin/health:
+    get:
+      tags: [Admin]
+      summary: Trạng thái kết nối TikTok và số lỗi xử lý quà
+      operationId: getGameHealth
+      x-required-scope: game:admin
+      parameters:
+        - name: liveSessionId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          sessionStatus: { type: string, description: 'Từ live_sessions.status' }
+                          gameEnabled: { type: boolean }
+                          giftProcessingEnabled: { type: boolean }
+                          pendingGiftCount: { type: integer }
+                          failedGiftCount: { type: integer }
+                          unpricedGiftCount: { type: integer }
+                          activeBreakthroughs: { type: integer }
+                          processorLagMs: { type: integer, description: 'Độ trễ hàng đợi xử lý hiện tại' }
+
+  /api/v1/game/demo/simulate:
+    post:
+      tags: [Demo]
+      summary: Bơm sự kiện giả qua MockConnector (chỉ khi TIKTOK_CONNECTOR_MODE=mock)
+      operationId: simulateGameEvent
+      x-required-scope: game:admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [liveSessionId, kind, username]
+              properties:
+                liveSessionId: { type: string, format: uuid }
+                kind: { type: string, enum: [chat, gift] }
+                username: { type: string }
+                comment: { type: string, maxLength: 200 }
+                giftId: { type: string, description: 'Một trong FIXTURE_GIFTS của MockConnector' }
+                repeatCount: { type: integer, minimum: 1, maximum: 9999 }
+      responses:
+        '202': { description: Đã đưa vào pipeline như sự kiện thật }
+        '409':
+          description: Server không ở chế độ mock
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+    apiKeyHeader: { type: apiKey, in: header, name: X-API-Key }
+
+  parameters:
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  responses:
+    BadRequest:
+      description: Dữ liệu không hợp lệ
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    Unauthorized:
+      description: Thiếu / sai API key
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    Forbidden:
+      description: Key không có scope cần thiết
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    NotFound:
+      description: Không tồn tại hoặc thuộc tenant khác
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+    Conflict:
+      description: Xung đột phiên bản / trạng thái
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorEnvelope' } } }
+
+  schemas:
+    BigIntString:
+      type: string
+      pattern: '^-?[0-9]+$'
+      description: Số nguyên lớn dạng chuỗi
+    AssetName:
+      type: string
+      pattern: '^[a-z0-9-]+\.(png|webp)$'
+
+    SuccessEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success: { const: true }
+        data: {}
+    PaginatedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          required: [meta]
+          properties:
+            meta:
+              type: object
+              properties:
+                nextCursor: { type: [string, 'null'] }
+                hasMore: { type: boolean }
+    ErrorEnvelope:
+      type: object
+      required: [success, error]
+      properties:
+        success: { const: false }
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code:
+              type: string
+              enum: [BAD_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY, RATE_LIMITED, INTERNAL_ERROR]
+            message: { type: string }
+            details: { type: object }
+            requestId: { type: string }
+
+    Gender: { type: string, enum: [male, female] }
+
+    Realm:
+      type: object
+      properties:
+        realmOrder: { type: integer, minimum: 1, maximum: 8 }
+        code: { type: string, enum: [luyen_khi, truc_co, kim_dan, nguyen_anh, hoa_than, luyen_hu, hop_the, dai_thua] }
+        name: { type: string, examples: ['Luyện Khí'] }
+        themeColor: { type: string, examples: ['#7FD3FF'] }
+        baseChanceBp: { type: [integer, 'null'] }
+        chanceBpPer100Diamonds: { type: [integer, 'null'] }
+        characterMaleAsset: { $ref: '#/components/schemas/AssetName' }
+        characterFemaleAsset: { $ref: '#/components/schemas/AssetName' }
+        levels:
+          type: array
+          items:
+            type: object
+            properties:
+              level: { type: integer }
+              requiredExp: { $ref: '#/components/schemas/BigIntString' }
+
+    Player:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        username: { type: string }
+        nickname: { type: [string, 'null'] }
+        avatarUrl: { type: [string, 'null'] }
+        gender: { $ref: '#/components/schemas/Gender' }
+        realmOrder: { type: integer }
+        realmName: { type: string }
+        level: { type: integer }
+        isMaxLevel: { type: boolean, description: 'Đại Viên Mãn' }
+        currentExp: { $ref: '#/components/schemas/BigIntString' }
+        requiredExp: { $ref: '#/components/schemas/BigIntString' }
+        totalCultivation: { $ref: '#/components/schemas/BigIntString' }
+        totalDiamondsGifted: { $ref: '#/components/schemas/BigIntString' }
+        breakthroughSuccessCount: { type: integer }
+        breakthroughFailCount: { type: integer }
+        breakthroughCooldownUntil: { type: [string, 'null'], format: date-time }
+        characterAsset: { $ref: '#/components/schemas/AssetName' }
+        status: { type: string, enum: [active, banned] }
+        version: { type: integer }
+        joinedAt: { type: string, format: date-time }
+        lastActiveAt: { type: string, format: date-time }
+
+    PlayerStatus:
+      type: object
+      properties:
+        playerId: { type: string, format: uuid }
+        canBreakthrough: { type: boolean }
+        blockedReason:
+          type: [string, 'null']
+          enum: [NOT_MAX_LEVEL, NOT_ENOUGH_EXP, MAX_REALM, ALREADY_IN_PROGRESS, COOLDOWN, TOO_MANY_CONCURRENT, GAME_DISABLED, null]
+        cooldownRemainingSeconds: { type: integer }
+        activeBreakthroughId: { type: [string, 'null'], format: uuid }
+        baseChanceBp: { type: [integer, 'null'] }
+
+    GiftTxType:
+      type: string
+      enum: [cultivation, breakthrough_bonus, cultivation_and_bonus, unjoined_pending, unpriced, ignored_game_disabled, overflow_capped, admin_adjustment]
+
+    GiftTransaction:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        eventId: { type: [string, 'null'], format: uuid }
+        liveSessionId: { type: string, format: uuid }
+        playerId: { type: [string, 'null'], format: uuid }
+        breakthroughId: { type: [string, 'null'], format: uuid }
+        giftId: { type: string }
+        giftName: { type: string }
+        diamondValue: { type: [integer, 'null'] }
+        giftQuantity: { type: integer }
+        totalDiamonds: { $ref: '#/components/schemas/BigIntString' }
+        cultivationReceived: { $ref: '#/components/schemas/BigIntString' }
+        chanceBonusBp: { type: integer }
+        transactionType: { $ref: '#/components/schemas/GiftTxType' }
+        status: { type: string, enum: [applied, pending, failed, expired] }
+        before: { $ref: '#/components/schemas/ProgressSnapshot' }
+        after: { $ref: '#/components/schemas/ProgressSnapshot' }
+        errorMessage: { type: [string, 'null'] }
+        occurredAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    ProgressSnapshot:
+      type: [object, 'null']
+      properties:
+        realmOrder: { type: integer }
+        level: { type: integer }
+        currentExp: { $ref: '#/components/schemas/BigIntString' }
+
+    Breakthrough:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        playerId: { type: string, format: uuid }
+        liveSessionId: { type: string, format: uuid }
+        sourceRealmOrder: { type: integer }
+        targetRealmOrder: { type: integer }
+        status: { type: string, enum: [preparing, resolving, succeeded, failed, cancelled] }
+        baseChanceBp: { type: integer }
+        giftBonusBp: { type: integer }
+        currentChanceBp: { type: integer, description: 'min(base + bonus, max) — cập nhật trực tiếp khi preparing' }
+        maxChanceBp: { type: integer }
+        finalChanceBp: { type: [integer, 'null'] }
+        bonusDiamonds: { $ref: '#/components/schemas/BigIntString' }
+        roll: { type: [integer, 'null'], description: 'Chỉ có sau khi resolve; 0..9999' }
+        cultivationPenalty: { oneOf: [{ $ref: '#/components/schemas/BigIntString' }, { type: 'null' }] }
+        startedAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        endedAt: { type: [string, 'null'], format: date-time }
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank: { type: integer, description: 'Dense rank' }
+        playerId: { type: string, format: uuid }
+        username: { type: string }
+        nickname: { type: [string, 'null'] }
+        avatarUrl: { type: [string, 'null'] }
+        realmOrder: { type: integer }
+        level: { type: integer }
+        value: { $ref: '#/components/schemas/BigIntString' }
+
+    Leaderboard:
+      type: object
+      properties:
+        board: { type: string, enum: [realm, level, cultivation, breakthrough, gifts] }
+        scope: { type: string, enum: [all, session] }
+        generatedAt: { type: string, format: date-time }
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/LeaderboardEntry' }
+
+    GameState:
+      type: object
+      properties:
+        lastSeq: { $ref: '#/components/schemas/BigIntString' }
+        flags:
+          type: object
+          properties:
+            gameEnabled: { type: boolean }
+            giftProcessingEnabled: { type: boolean }
+            effectsEnabled: { type: boolean }
+        activeBreakthroughs:
+          type: array
+          items: { $ref: '#/components/schemas/Breakthrough' }
+        spotlightPlayer: { oneOf: [{ $ref: '#/components/schemas/Player' }, { type: 'null' }] }
+        leaderboards:
+          type: array
+          items: { $ref: '#/components/schemas/Leaderboard' }
+
+    GameConfigValues:
+      type: object
+      additionalProperties: false
+      properties:
+        gameEnabled: { type: boolean }
+        giftProcessingEnabled: { type: boolean }
+        effectsEnabled: { type: boolean }
+        tuViMultiplier: { type: integer, minimum: 1, maximum: 1000 }
+        maxOverflowRatio: { type: number, minimum: 0, maximum: 100 }
+        maxChanceBp: { type: integer, minimum: 0, maximum: 10000 }
+        preparationSeconds: { type: integer, minimum: 10, maximum: 120 }
+        cooldownSeconds: { type: integer, minimum: 0, maximum: 86400 }
+        failurePenaltyRatio: { type: number, minimum: 0, maximum: 1 }
+        addExpDuringBreakthrough: { type: boolean }
+        maxConcurrentBreakthroughs: { type: integer, minimum: 1, maximum: 10 }
+        autoJoinOnGift: { type: boolean }
+        pendingGiftTtlHours: { type: integer, minimum: 1, maximum: 720 }
+        defaultGender: { $ref: '#/components/schemas/Gender' }
+        commandCooldownSeconds: { type: integer, minimum: 0, maximum: 300 }
+
+    GameConfig:
+      type: object
+      properties:
+        revision: { type: integer }
+        values: { $ref: '#/components/schemas/GameConfigValues' }
+        updatedAt: { type: string, format: date-time }
+
+    AuditLog:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        actorApiKeyId: { type: [string, 'null'], format: uuid }
+        action: { type: string, enum: [player.adjust, player.reset, config.update, realm.update, gift_tx.retry] }
+        targetType: { type: string }
+        targetId: { type: string }
+        before: { type: object }
+        after: { type: object }
+        reason: { type: string }
+        requestId: { type: string }
+        createdAt: { type: string, format: date-time }

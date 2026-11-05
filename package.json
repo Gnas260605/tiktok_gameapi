@@ -12,15 +12,20 @@
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run tests/unit",
     "test:game": "vitest run tests/game",
+    "test:contract": "vitest run tests/contract",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "vitest run tests/e2e",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
-    "migrate": "prisma migrate deploy",
-    "seed": "tsx prisma/seed.ts"
+    "migrate": "pnpm prisma:deploy",
+    "seed": "pnpm prisma:seed"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

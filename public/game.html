@@ -443,31 +443,126 @@
 
     .setup-card {
       width: 100%;
-      max-width: 420px;
+      max-width: 960px;
+      max-height: 92vh;
+      overflow-y: auto;
       background: var(--panel-bg);
       border: 1px solid var(--panel-border);
-      border-radius: 22px;
-      padding: 26px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px var(--panel-glow);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.85), 0 0 50px var(--panel-glow);
       display: flex;
       flex-direction: column;
+      gap: 16px;
       position: relative;
     }
 
     .setup-glow {
       position: absolute;
       top: 0;
-      left: 15%;
-      right: 15%;
+      left: 10%;
+      right: 10%;
       height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent), var(--gold), transparent);
+      background: linear-gradient(90deg, transparent, var(--accent), var(--cyan), var(--gold), transparent);
+    }
+
+    /* Game Switcher Tabs */
+    .portal-nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--panel-border);
+      flex-wrap: wrap;
+    }
+
+    .portal-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .portal-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-decoration: none;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--panel-border);
+      transition: all 0.2s;
+    }
+
+    .portal-tab:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .portal-tab.active {
+      color: #fff;
+      background: rgba(254, 44, 85, 0.18);
+      border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .portal-tab.tutien-tab {
+      border-color: rgba(37, 244, 238, 0.3);
+      color: var(--cyan);
+    }
+
+    .portal-tab.tutien-tab:hover {
+      background: rgba(37, 244, 238, 0.15);
+      border-color: var(--cyan);
+    }
+
+    .obs-shortcut-pill {
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--panel-border);
+      padding: 4px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .obs-shortcut-pill:hover {
+      color: var(--gold);
+      border-color: var(--gold);
+    }
+
+    /* Dual Panel Grid */
+    .setup-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1.35fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 820px) {
+      .setup-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+    }
+
+    .setup-col-left, .setup-col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
 
     .setup-header {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 6px;
     }
 
     .setup-icon {
@@ -477,10 +572,13 @@
 
     .setup-title {
       font-family: var(--font-display);
-      font-size: 1.6rem;
+      font-size: 1.55rem;
       font-weight: 900;
       letter-spacing: -0.02em;
       color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .setup-badge {
@@ -495,8 +593,7 @@
 
     .setup-sub {
       color: var(--text-muted);
-      font-size: 0.85rem;
-      margin-bottom: 20px;
+      font-size: 0.82rem;
       line-height: 1.45;
     }
 
@@ -508,7 +605,6 @@
       border-radius: 12px;
       padding: 4px;
       gap: 4px;
-      margin-bottom: 16px;
     }
 
     .mode-pill {
@@ -532,7 +628,9 @@
     }
 
     .form-group {
-      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
     .form-label {
@@ -544,7 +642,6 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-muted);
-      margin-bottom: 6px;
     }
 
     .input-wrapper {
@@ -555,21 +652,22 @@
 
     .input-icon {
       position: absolute;
-      left: 12px;
-      font-size: 1rem;
-      color: var(--text-dim);
+      left: 14px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
     }
 
     .main-input {
       width: 100%;
       background: #090c15;
       border: 1.5px solid var(--panel-border);
-      border-radius: 12px;
-      padding: 12px 14px 12px 38px;
+      border-radius: 14px;
+      padding: 13px 14px 13px 40px;
       color: #fff;
       font-family: var(--font-body);
       font-size: 1.05rem;
-      font-weight: 600;
+      font-weight: 700;
       outline: none;
       transition: all 0.2s;
     }
@@ -585,7 +683,6 @@
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
-      margin-top: 8px;
     }
 
     .quick-chip {
@@ -595,7 +692,7 @@
       color: var(--text-muted);
       font-size: 0.7rem;
       font-family: var(--font-mono);
-      padding: 3px 8px;
+      padding: 3px 9px;
       cursor: pointer;
       transition: all 0.15s;
     }
@@ -606,44 +703,92 @@
       color: #fff;
     }
 
-    /* Collapsed Accordion */
-    .advanced-toggle {
+    /* Live Creator Radar Card */
+    .creator-radar {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 10px 12px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 12px;
+      transition: border-color 0.2s;
+    }
+
+    .radar-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid var(--panel-border);
+      object-fit: cover;
+      background: #151b2c;
+      flex-shrink: 0;
+    }
+
+    .radar-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .radar-name {
+      font-family: var(--font-display);
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .radar-sub {
       font-size: 0.74rem;
-      color: var(--text-dim);
-      cursor: pointer;
-      padding: 6px 0;
-      margin-bottom: 6px;
-    }
-
-    .advanced-toggle:hover {
       color: var(--text-muted);
+      font-family: var(--font-mono);
     }
 
-    .advanced-box {
-      display: none;
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid var(--panel-border);
-      border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 14px;
+    .radar-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
     }
 
-    .advanced-box.open {
-      display: block;
+    .radar-badge.live {
+      background: rgba(254, 44, 85, 0.18);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+
+    .radar-badge.offline {
+      background: rgba(255, 208, 0, 0.12);
+      border: 1px solid rgba(255, 208, 0, 0.3);
+      color: var(--gold);
+    }
+
+    /* Action Buttons Row */
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
     }
 
     .btn-submit {
       width: 100%;
-      padding: 14px;
+      padding: 13px;
       border: none;
       border-radius: 12px;
       background: linear-gradient(135deg, #fe2c55, #ff4c72);
       color: #fff;
       font-family: var(--font-display);
-      font-size: 1.05rem;
+      font-size: 1.02rem;
       font-weight: 800;
       letter-spacing: 0.02em;
       cursor: pointer;
@@ -660,18 +805,203 @@
       box-shadow: 0 12px 30px rgba(254, 44, 85, 0.5);
     }
 
-    .btn-submit:active {
-      transform: translateY(0);
-    }
-
     .btn-submit:disabled {
       opacity: 0.6;
       cursor: wait;
     }
 
-    #setupStatus {
-      margin-top: 10px;
+    .btn-demo-quick {
+      width: 100%;
+      padding: 11px;
+      border-radius: 12px;
+      background: rgba(37, 244, 238, 0.08);
+      border: 1.5px solid var(--cyan);
+      color: var(--cyan);
+      font-family: var(--font-display);
+      font-size: 0.92rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .btn-demo-quick:hover {
+      background: rgba(37, 244, 238, 0.18);
+      box-shadow: 0 4px 16px var(--cyan-glow);
+      transform: translateY(-1px);
+    }
+
+    /* Collapsed Accordion */
+    .advanced-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    .advanced-toggle:hover {
+      color: var(--text-muted);
+    }
+
+    .advanced-box {
+      display: none;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .advanced-box.open {
+      display: block;
+    }
+
+    /* Right Column: Feature Hub & Testpad */
+    .features-panel {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .features-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .features-title {
+      font-family: var(--font-display);
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .features-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    @media (max-width: 540px) {
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .feature-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .feature-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .feature-icon-name {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-display);
       font-size: 0.82rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .feature-badge {
+      font-size: 0.66rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      background: rgba(255, 208, 0, 0.15);
+      color: var(--gold);
+    }
+
+    .feature-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .feature-test-btn {
+      margin-top: 2px;
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+
+    .feature-test-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .feature-test-btn:active {
+      transform: scale(0.96);
+    }
+
+    .feature-card.hazard {
+      border-color: rgba(254, 44, 85, 0.25);
+    }
+    .feature-card.hazard .feature-badge {
+      background: rgba(254, 44, 85, 0.18);
+      color: var(--accent);
+    }
+
+    .feature-card.cable {
+      border-color: rgba(37, 244, 238, 0.25);
+    }
+    .feature-card.cable .feature-badge {
+      background: rgba(37, 244, 238, 0.18);
+      color: var(--cyan);
+    }
+
+    #setupStatus {
+      font-size: 0.8rem;
       color: var(--text-muted);
       min-height: 1.2em;
       text-align: center;
@@ -679,24 +1009,6 @@
 
     #setupStatus.error {
       color: #fca5a5;
-    }
-
-    .setup-rules {
-      margin-top: 16px;
-      padding-top: 12px;
-      border-top: 1px solid var(--panel-border);
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      line-height: 1.6;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-    }
-
-    .rule-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
     }
 
     /* OBS Clean Mode Hint */
@@ -878,75 +1190,222 @@
     </div>
   </aside>
 
-  <!-- Setup Modal (ProMax Minimalist Onboarding) -->
+  <!-- Setup Modal (ProMax Minimalist Onboarding & Feature Showroom) -->
   <div id="setup">
-    <form class="setup-card" id="setupForm" onsubmit="handleSetupSubmit(event)">
+    <div class="setup-card">
       <div class="setup-glow"></div>
-      
-      <div class="setup-header">
-        <span class="setup-icon">🛕</span>
-        <div>
-          <div style="display: flex; align-items: center; gap: 7px;">
-            <h1 class="setup-title">Leo Chùa</h1>
-            <span class="setup-badge">PRO MAX</span>
+
+      <!-- Portal Navigation Header -->
+      <div class="portal-nav-bar">
+        <div class="portal-tabs">
+          <span class="portal-tab active">🛕 Leo Chùa LIVE</span>
+          <a href="/tutien" class="portal-tab tutien-tab">⚔️ Tu Tiên LIVE ↗</a>
+          <a href="/" class="portal-tab">📊 Streamer Studio ↗</a>
+        </div>
+        <button type="button" class="obs-shortcut-pill" onclick="copyObsUrl()" title="Sao chép link cho OBS Studio">
+          🎥 Copy Link OBS Browser Source
+        </button>
+      </div>
+
+      <div class="setup-grid">
+        <!-- Left Column: Zero-Friction Connection -->
+        <div class="setup-col-left">
+          <div class="setup-header">
+            <span class="setup-icon">🛕</span>
+            <div>
+              <div class="setup-title">
+                Leo Chùa
+                <span class="setup-badge">PRO MAX</span>
+              </div>
+              <p class="setup-sub">Chỉ cần nhập ID TikTok — Mọi thứ tự động nhận diện và kết nối ngay!</p>
+            </div>
+          </div>
+
+          <!-- Mode Selector -->
+          <div class="mode-pills">
+            <button type="button" class="mode-pill active" onclick="selectMode('live', this)">🔴 LIVE Thật</button>
+            <button type="button" class="mode-pill" onclick="selectMode('mock', this)">🧪 Mock Server</button>
+            <button type="button" class="mode-pill" onclick="selectMode('demo', this)">🎮 Demo Mẫu</button>
+          </div>
+
+          <!-- Main TikTok ID Input -->
+          <div class="form-group" id="userGroup">
+            <label class="form-label" for="userInput">
+              <span>ID TikTok Streamer</span>
+              <span style="color: var(--accent); font-size: 0.7rem; font-weight: 700;">(Bắt buộc)</span>
+            </label>
+            <div class="input-wrapper">
+              <span class="input-icon">@</span>
+              <input id="userInput" class="main-input" autocomplete="off" spellcheck="false" placeholder="vd: anvatcomai.food" autofocus oninput="onUsernameInputChanged(this.value)">
+            </div>
+
+            <!-- Quick Preset Chips -->
+            <div class="quick-chips">
+              <span class="quick-chip" onclick="applyQuickId('anvatcomai.food')">⚡ anvatcomai.food</span>
+              <span class="quick-chip" onclick="applyQuickId('linhlinh.live')">⚡ linhlinh.live</span>
+              <span class="quick-chip" onclick="applyQuickId('phuong_hang')">⚡ phuong_hang</span>
+              <span class="quick-chip" onclick="applyQuickId('mock_creator')">⚡ mock_creator</span>
+            </div>
+          </div>
+
+          <!-- Realtime Live Creator Radar Card -->
+          <div id="creatorRadarCard" class="creator-radar">
+            <img id="radarAvatar" class="radar-avatar" src="/game-assets/logo.png" alt="Streamer Avatar" onerror="this.src='/game-assets/pagoda.png'">
+            <div class="radar-info">
+              <div id="radarName" class="radar-name">Chưa chọn kênh</div>
+              <div id="radarSub" class="radar-sub">Nhập ID để quét trạng thái phòng live</div>
+            </div>
+            <div id="radarBadge" class="radar-badge offline">
+              <span class="beacon-dot"></span> SẴN SÀNG
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-buttons">
+            <button type="button" id="startBtn" class="btn-submit" onclick="handleSetupSubmit(event)">
+              <span>▶ BẮT ĐẦU LIVE NGAY</span>
+            </button>
+            <button type="button" class="btn-demo-quick" onclick="quickStartDemo()">
+              <span>🎮 CHƠI THỬ OFFLINE (DEMO 1-CLICK)</span>
+            </button>
+          </div>
+
+          <div id="setupStatus"></div>
+
+          <!-- Advanced Collapsible Drawer (Automated) -->
+          <div id="advancedToggle" class="advanced-toggle" onclick="toggleAdvancedSettings()">
+            <span>⚙️ Cài đặt Tenant Key nâng cao (Tự động)</span>
+            <span id="advancedIcon">▼</span>
+          </div>
+          <div id="advancedBox" class="advanced-box">
+            <label class="form-label" for="keyInput">Tenant API Key</label>
+            <input id="keyInput" class="input-field" type="password" autocomplete="off" placeholder="tik_live_...">
+          </div>
+        </div>
+
+        <!-- Right Column: All Features & Live Testpad -->
+        <div class="setup-col-right">
+          <div class="features-panel">
+            <div class="features-header">
+              <div>
+                <div class="features-title">
+                  <span>⚡ TẤT CẢ TÍNH NĂNG TƯƠNG TÁC PHÒNG LIVE</span>
+                </div>
+                <div class="features-subtitle">Người xem tương tác sẽ kích hoạt nhân vật leo núi ngay trên màn hình:</div>
+              </div>
+            </div>
+
+            <div class="features-grid">
+              <!-- Feature 1: Chat -->
+              <div class="feature-card">
+                <div class="feature-card-top">
+                  <div class="feature-icon-name"><span>💬</span> Bình Luận</div>
+                  <span class="feature-badge">+2 bậc</span>
+                </div>
+                <div class="feature-desc">Mọi bình luận đều đẩy nhân vật leo thang dồn dập.</div>
+                <button type="button" class="feature-test-btn" onclick="testFeature('chat')">▶ Thử Chat</button>
+              </div>
+
+              <!-- Feature 2: Like -->
+              <div class="feature-card">
+                <div class="feature-card-top">
+                  <div class="feature-icon-name"><span>❤️</span> Thả Tim</div>
+                  <span class="feature-badge">+1 bậc / tim</span>
+                </div>
+                <div class="feature-desc">Bão tim tạo hiệu ứng tim bay neon rực rỡ trợ lực.</div>
+                <button type="button" class="feature-test-btn" onclick="testFeature('like')">▶ Thử Bão Tim</button>
+              </div>
+
+              <!-- Feature 3: Follow -->
+              <div class="feature-card">
+                <div class="feature-card-top">
+                  <div class="feature-icon-name"><span>➕</span> Follow Mới</div>
+                  <span class="feature-badge">+10 bậc</span>
+                </div>
+                <div class="feature-desc">Khán giả bấm theo dõi phòng live sẽ bật nhảy thần tốc.</div>
+                <button type="button" class="feature-test-btn" onclick="testFeature('follow')">▶ Thử Follow</button>
+              </div>
+
+              <!-- Feature 4: Share -->
+              <div class="feature-card">
+                <div class="feature-card-top">
+                  <div class="feature-icon-name"><span>🔗</span> Chia Sẻ</div>
+                  <span class="feature-badge">+15 bậc</span>
+                </div>
+                <div class="feature-desc">Chia sẻ livestream lan tỏa năng lượng, tăng tốc cực đại.</div>
+                <button type="button" class="feature-test-btn" onclick="testFeature('share')">▶ Thử Share</button>
+              </div>
+
+              <!-- Feature 5: Small Gifts -->
+              <div class="feature-card">
+                <div class="feature-card-top">
+                  <div class="feature-icon-name"><span>🎁</span> Quà Hoa Hồng</div>
+                  <span class="feature-badge">Bay theo KC</span>
+                </div>
+                <div class="feature-desc">Hoa hồng, kem, pháo... mỗi kim cương đẩy bay thêm 1 bậc!</div>
+                <button type="button" class="feature-test-btn" onclick="testFeature('gift_rose')">▶ Tặng Hoa Hồng</button>
+              </div>
+
+              <!-- Feature 6: Big Gift Cable Car -->
+              <div class="feature-card cable">
+                <div class="feature-card-top">
+                  <div class="feature-icon-name"><span>🚠</span> Cáp Treo (≥100 KC)</div>
+                  <span class="feature-badge">Vút Thẳng Đỉnh</span>
+                </div>
+                <div class="feature-desc">Quà lớn (Du thuyền, Sư tử, Cáp treo) lên Cáp Treo vượt núi!</div>
+                <button type="button" class="feature-test-btn" onclick="testFeature('gift_galaxy')">▶ Thử Cáp Treo</button>
+              </div>
+
+              <!-- Feature 7: Monkey Hazard -->
+              <div class="feature-card hazard">
+                <div class="feature-card-top">
+                  <div class="feature-icon-name"><span>🐒</span> Khỉ Cướp Dép</div>
+                  <span class="feature-badge">-8 bậc</span>
+                </div>
+                <div class="feature-desc">Khỉ núi bất ngờ phục kích cướp dép top 3 dẫn đầu!</div>
+                <button type="button" class="feature-test-btn" onclick="testFeature('monkey')">▶ Thả Khỉ</button>
+              </div>
+
+              <!-- Feature 8: WC Hazard -->
+              <div class="feature-card hazard">
+                <div class="feature-card-top">
+                  <div class="feature-icon-name"><span>💩</span> WC Đau Bụng</div>
+                  <span class="feature-badge">Kẹt 10 giây</span>
+                </div>
+                <div class="feature-desc">Người chơi bị nhốt vào nhà vệ sinh không thể di chuyển!</div>
+                <button type="button" class="feature-test-btn" onclick="testFeature('wc')">▶ Bắt Vào WC</button>
+              </div>
+
+              <!-- Feature 9: Paper Rescue -->
+              <div class="feature-card">
+                <div class="feature-card-top">
+                  <div class="feature-icon-name"><span>🧻</span> Cứu Bạn "Giấy"</div>
+                  <span class="feature-badge">Thoát Ngay</span>
+                </div>
+                <div class="feature-desc">Khán giả gõ "giấy" hoặc "giay" để giải cứu đồng đội kẹt WC!</div>
+                <button type="button" class="feature-test-btn" onclick="testFeature('paper')">▶ Gõ Cứu Giấy</button>
+              </div>
+
+              <!-- Feature 10: Victory Bell -->
+              <div class="feature-card">
+                <div class="feature-card-top">
+                  <div class="feature-icon-name"><span>🔔</span> Chuông Thắng</div>
+                  <span class="feature-badge">Đỉnh 100 Bậc</span>
+                </div>
+                <div class="feature-desc">Ai gõ chuông trước chiến thắng vòng, pháo hoa nổ tung vinh danh!</div>
+                <button type="button" class="feature-test-btn" onclick="testFeature('win')">▶ Gõ Chuông Thắng</button>
+              </div>
+            </div>
+
+            <!-- Mini Tips Footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; color: var(--text-dim); padding-top: 6px; border-top: 1px solid var(--panel-border);">
+              <span>💡 Phím tắt nhanh: [S] Menu Studio · [H] OBS Sạch · [M] Khỉ · [W] WC</span>
+              <span style="color: var(--emerald); font-weight: 700;">🟢 Âm thanh chuông & Voice AI tích hợp</span>
+            </div>
           </div>
         </div>
       </div>
-      <p class="setup-sub">
-        Chỉ cần nhập ID TikTok để bắt đầu tương tác ngay với người xem!
-      </p>
-
-      <!-- Mode Selector -->
-      <div class="mode-pills">
-        <button type="button" class="mode-pill active" onclick="selectMode('live', this)">🔴 LIVE Thật</button>
-        <button type="button" class="mode-pill" onclick="selectMode('mock', this)">🧪 Mock Server</button>
-        <button type="button" class="mode-pill" onclick="selectMode('demo', this)">🎮 Demo Mẫu</button>
-      </div>
-
-      <!-- Main TikTok ID Input (The ONLY Required Input!) -->
-      <div class="form-group" id="userGroup">
-        <label class="form-label" for="userInput">
-          <span>ID TikTok đang phát LIVE</span>
-          <span style="color: var(--accent); font-size: 0.7rem;">(Bắt buộc)</span>
-        </label>
-        <div class="input-wrapper">
-          <span class="input-icon">@</span>
-          <input id="userInput" class="main-input" autocomplete="off" spellcheck="false" placeholder="vd: anvatcomai.food" autofocus>
-        </div>
-
-        <div class="quick-chips">
-          <span class="quick-chip" onclick="applyQuickId('anvatcomai.food')">⚡ anvatcomai.food</span>
-          <span class="quick-chip" onclick="applyQuickId('linhlinh.live')">⚡ linhlinh.live</span>
-          <span class="quick-chip" onclick="applyQuickId('mock_creator')">⚡ mock_creator</span>
-        </div>
-      </div>
-
-      <!-- Collapsed Advanced Settings (Auto-managed) -->
-      <div id="advancedToggle" class="advanced-toggle" onclick="toggleAdvancedSettings()">
-        <span>⚙️ Cài đặt nâng cao (Tự động)</span>
-        <span id="advancedIcon">▼</span>
-      </div>
-
-      <div id="advancedBox" class="advanced-box">
-        <label class="form-label" for="keyInput">Tenant API Key</label>
-        <input id="keyInput" class="input-field" type="password" autocomplete="off" placeholder="tik_live_...">
-      </div>
-
-      <button type="submit" id="startBtn" class="btn-submit">
-        <span>▶ BẮT ĐẦU LIVE NGAY</span>
-      </button>
-
-      <div id="setupStatus"></div>
-
-      <div class="setup-rules">
-        <div class="rule-item">💬 Bình luận: <b>+2 bậc</b></div>
-        <div class="rule-item">❤️ Thả tim: <b>+1 bậc</b></div>
-        <div class="rule-item">➕ Follow: <b>+10 bậc</b></div>
-        <div class="rule-item">🔗 Share: <b>+15 bậc</b></div>
-        <div class="rule-item" style="grid-column: span 2;">🎁 Quà: <b>Bay lên theo kim cương</b></div>
-        <div class="rule-item" style="grid-column: span 2;">🧻 Ai kẹt WC? Gõ <b>giấy</b> để cứu!</div>
-      </div>
-    </form>
+    </div>
   </div>
 
   <div id="obsHint">Phím [H]: Chế độ OBS sạch · [S]: Bảng điều khiển Studio</div>
@@ -1907,6 +2366,7 @@
 
       updateModePillUI();
       initVoiceEngineStatus();
+      if (userInput.value) onUsernameInputChanged(userInput.value);
     }
     initDefaults();
 
@@ -1936,6 +2396,102 @@
     window.applyQuickId = function(id) {
       userInput.value = id;
       userInput.focus();
+      onUsernameInputChanged(id);
+    };
+
+    let lookupTimer = null;
+    window.onUsernameInputChanged = function(val) {
+      clearTimeout(lookupTimer);
+      const username = String(val || '').trim().replace(/^@+/, '').toLowerCase();
+      if (!username) {
+        document.getElementById('radarName').innerText = 'Chưa chọn kênh';
+        document.getElementById('radarSub').innerText = 'Nhập ID để quét trạng thái phòng live';
+        document.getElementById('radarBadge').className = 'radar-badge offline';
+        document.getElementById('radarBadge').innerText = 'SẴN SÀNG';
+        return;
+      }
+
+      document.getElementById('radarName').innerText = `@${username}`;
+      document.getElementById('radarSub').innerText = 'Đang quét trạng thái TikTok LIVE...';
+
+      lookupTimer = setTimeout(async () => {
+        try {
+          const apiKey = keyInput.value || 'tik_live_acme_secret_key_1234567890abcdef';
+          const profile = await api(`/api/v1/tiktok/creators/${encodeURIComponent(username)}`, apiKey);
+          if (profile) {
+            document.getElementById('radarName').innerText = profile.nickname || `@${username}`;
+            document.getElementById('radarSub').innerText = `@${username} · ${profile.followerCount ? profile.followerCount.toLocaleString() + ' followers' : 'TikTok Creator'}`;
+            if (profile.avatarThumb) {
+              document.getElementById('radarAvatar').src = profile.avatarThumb;
+            }
+            const badge = document.getElementById('radarBadge');
+            if (profile.isLive) {
+              badge.className = 'radar-badge live';
+              badge.innerHTML = '🔴 ĐANG LIVE';
+            } else {
+              badge.className = 'radar-badge offline';
+              badge.innerHTML = '🟡 OFFLINE (Chạy Mock/Demo)';
+            }
+          }
+        } catch (e) {
+          document.getElementById('radarSub').innerText = `@${username} · Sẵn sàng khởi chạy`;
+        }
+      }, 400);
+    };
+
+    window.copyObsUrl = function() {
+      const url = `${location.origin}/game?obs=1`;
+      navigator.clipboard.writeText(url).then(() => {
+        toast('📋 Đã copy link OBS Browser Source: ' + url, '#ffd000');
+      }).catch(() => {
+        prompt('Link OBS Browser Source (720x1280):', url);
+      });
+    };
+
+    window.quickStartDemo = function() {
+      selectMode('demo');
+      handleSetupSubmit();
+    };
+
+    window.testFeature = function(kind) {
+      sound.unlock();
+      if (players.size === 0) {
+        ['Bé Bắp', 'Anh Ba Xe Ôm', 'Cô Tư', 'Mây Lang Thang'].forEach((name, i) => {
+          ensurePlayer({ uniqueId: `test_fan_${i}`, nickname: name });
+        });
+      }
+
+      if (kind === 'chat') {
+        injectMock('chat');
+        toast('💬 Đã gửi thử bình luận: +2 bậc', '#25f4ee');
+      } else if (kind === 'like') {
+        for (let i = 0; i < 5; i++) injectMock('like');
+        toast('❤️ Bão tim trợ lực: +5 bậc', '#fe2c55');
+      } else if (kind === 'follow') {
+        injectMock('follow');
+        toast('➕ Follow mới bứt phá: +10 bậc!', '#ffd000');
+      } else if (kind === 'share') {
+        const u = nextViewer();
+        const p = ensurePlayer(u);
+        p.steps = Math.min(SUMMIT, p.steps + 15);
+        p.lastActive = performance.now();
+        toast(`🔗 ${u.nickname} chia sẻ livestream siêu tốc: +15 bậc!`, '#00f2a9');
+      } else if (kind === 'gift_rose') {
+        injectMock('gift_rose');
+        toast('🎁 Tặng Hoa Hồng (10 KC): Bay thẳng 10 bậc!', '#ff6fb5');
+      } else if (kind === 'gift_galaxy') {
+        injectMock('gift_galaxy');
+        toast('🚠 Quà khủng (1000 KC): Phóng CÁP TREO bay vút đỉnh!', '#ffd000');
+      } else if (kind === 'monkey') {
+        runHazard(performance.now(), 'monkey');
+      } else if (kind === 'wc') {
+        runHazard(performance.now(), 'wc');
+      } else if (kind === 'paper') {
+        injectMock('paper');
+        toast('🧻 Đã gõ "giấy" cứu người kẹt WC!', '#00f2a9');
+      } else if (kind === 'win') {
+        triggerSummitWin();
+      }
     };
 
     window.toggleAdvancedSettings = function() {

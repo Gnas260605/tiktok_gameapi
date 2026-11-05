@@ -42,8 +42,12 @@ LUẬT KHÔNG ĐƯỢC VI PHẠM:
 8. Chỉ sửa file thuộc quyền của bạn (06_AI_Agents.md §3). Cần sửa file của agent khác →
    ghi yêu cầu vào báo cáo, không tự sửa.
 9. Làm theo lát mỏng: mỗi lát = code + test + chạy test, rồi mới sang lát sau.
-10. Làm trên nhánh riêng `tutien/<phase>-<vai-trò>`; không push, không merge vào main,
-    không chạy lệnh xóa dữ liệu (DROP, prisma migrate reset) trên DB không phải DB test.
+10. Làm trên nhánh riêng `tutien/<phase>-<vai-trò>` tách từ `origin/main` mới nhất.
+    Khi bàn giao: commit + `git push -u origin tutien/<phase>-<vai-trò>`.
+    KHÔNG push lên main, KHÔNG merge, KHÔNG force-push. Không chạy lệnh xóa dữ liệu
+    (DROP, prisma migrate reset) trên DB không phải DB test.
+11. Lưu artifact "Bàn giao" vào `docs/game/handoffs/P<n>-<vai-trò>.md` trong chính nhánh đó
+    để Reviewer (Claude) đọc được.
 
 KẾT THÚC MỖI PHIÊN bằng artifact "Bàn giao" đúng mẫu:
 ## Bàn giao P<n> — <vai trò>
@@ -263,3 +267,21 @@ Bước 6  A6 P8 nghiệm thu  →  A1 review cuối  →  bạn merge
 
 Sau mỗi bước: A1 review các bàn giao, bạn merge nhánh đã được chấp nhận vào nhánh tích hợp
 `tutien/integration` trước khi các agent bước sau bắt đầu (để họ thấy code của nhau).
+
+---
+
+## §7. Quy trình với Claude Code (đầu não)
+
+Claude Code là reviewer và người ra lệnh; Antigravity là đội thực thi. Hai bên nói chuyện qua GitHub
+`Gnas260605/tiktok_gameapi`:
+
+```text
+Claude ra prompt bước N ──▶ bạn dán vào agent Antigravity ──▶ agent làm, push nhánh tutien/*
+     ▲                                                              │
+     └── Claude fetch, đọc diff + handoff, chạy typecheck/test ◀────┘
+         → CHẤP NHẬN: Claude merge vào main, ra prompt bước N+1
+         → YÊU CẦU SỬA: Claude ra prompt sửa (file:dòng cụ thể) cho đúng agent đó
+```
+
+Bạn chỉ cần nói với Claude: "A<n> xong, nhánh `tutien/...`" (hoặc dán lỗi agent gặp).
+Trước mỗi bước, agent chạy `git fetch origin && git checkout -B tutien/<...> origin/main`.

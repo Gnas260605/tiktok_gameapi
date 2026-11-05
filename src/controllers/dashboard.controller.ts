@@ -52,6 +52,30 @@ export function registerDashboardRoutes(fastify: FastifyInstance): void {
   // Stream overlay game, meant to be added as a browser source in OBS / LIVE Studio
   fastify.get('/game', createHtmlHandler('game.html'));
 
+  // Shared UI system (tokens, components, icon sprite, shell script) used by every page.
+  // Flat whitelist of names, so no path traversal.
+  const sharedTypes: Record<string, string> = {
+    css: 'text/css; charset=utf-8',
+    js: 'text/javascript; charset=utf-8',
+    svg: 'image/svg+xml',
+  };
+  const sharedDir = path.dirname(resolvePublicFile(path.join('shared', 'ui.css')));
+  fastify.get('/shared/:file', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { file } = request.params as { file: string };
+    const match = /^[a-z0-9-]+\.(css|js|svg)$/.exec(file);
+    const sharedPath = path.join(sharedDir, file);
+    if (!match || !fs.existsSync(sharedPath)) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Shared UI file not found', requestId: request.id },
+      });
+    }
+    return reply
+      .type(sharedTypes[match[1]])
+      .header('Cache-Control', 'public, max-age=300')
+      .send(fs.readFileSync(sharedPath));
+  });
+
   // Public bootstrap defaults for zero-config onboarding (just enter TikTok ID)
   fastify.get('/api/v1/public/session-defaults', async () => {
     return {

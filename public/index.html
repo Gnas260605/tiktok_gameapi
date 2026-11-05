@@ -3,27 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TikUser LIVE — TikTok Broadcast Console</title>
+  <title>Studio | TikUser LIVE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Noto+Serif:wght@600;700&display=swap" rel="stylesheet">
+  <script src="/shared/app-shell.js"></script>
   <style>
+    @layer base, page;
+    @layer page {
     :root {
-      --bg-dark: #090b10;
-      --bg-card: rgba(18, 22, 34, 0.75);
-      --bg-card-hover: rgba(26, 32, 50, 0.85);
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-glow: rgba(254, 44, 85, 0.3);
-      --tiktok-red: #fe2c55;
-      --tiktok-cyan: #25f4ee;
-      --gold: #ffd000;
-      --purple: #9b51e0;
-      --emerald: #00f2a9;
-      --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
-      --text-dim: #6b7280;
-      --font-display: 'Outfit', sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      /* page aliases onto /shared/ui.css tokens */
+      --bg-dark: var(--ink-0);
+      --bg-card: var(--ink-1);
+      --bg-card-hover: var(--ink-2);
+      --border-subtle: var(--line);
+      --border-glow: var(--line-strong);
+      --tiktok-red: var(--live);
+      --tiktok-cyan: var(--info);
+      --gold: var(--accent);
+      --purple: #9b6bff;
+      --emerald: var(--ok);
+      --text-main: var(--text);
+      --text-muted: var(--text-2);
+      --text-dim: var(--text-3);
+      --font-display: var(--font-ui);
+      --font-mono: var(--font-ui);
     }
 
     * {
@@ -815,26 +819,21 @@
       border-color: rgba(239, 68, 68, 0.35);
       color: #fca5a5;
     }
+      } /* end @layer page */
   </style>
+  <link rel="stylesheet" href="/shared/ui.css">
 </head>
-<body>
+<body class="ui-page">
 
   <!-- Top Navigation Header -->
-  <header>
-    <div class="brand">
-      <div class="brand-icon">⚡</div>
-      <div class="brand-title">TikUser <span>LIVE</span></div>
-      <div class="brand-badge">API v1.1.0</div>
-    </div>
-
-    <div class="nav-status">
+  <header class="ui-appbar">
+    <a class="ui-brand" href="/"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-brand"></use></svg><span>TikUser <b>LIVE</b></span></a>
+    <nav class="ui-products" data-ui-products data-current="studio"></nav>
+    <div class="ui-appbar-end">
       <div class="status-pill">
         <div id="connectionBeacon" class="beacon"></div>
         <span id="connectionStatusText">Sẵn sàng kết nối</span>
       </div>
-      <a href="/game" target="_blank" style="color: var(--gold); text-decoration: none; font-weight: 600;">🛕 Game Leo Chùa ↗</a>
-      <a href="/tutien" target="_blank" style="color: #25f4ee; text-decoration: none; font-weight: 600;">⚔️ Game Tu Tiên LIVE ↗</a>
-      <a href="/docs" target="_blank" style="color: var(--text-muted); text-decoration: none; font-weight: 600;">Swagger Docs ↗</a>
     </div>
   </header>
 
@@ -843,16 +842,16 @@
     <!-- Left Column: Control Panel -->
     <aside class="glass-card">
       <div class="panel-header">
-        <h2>🎮 Điều khiển kết nối</h2>
+        <h2><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gamepad"></use></svg> Điều khiển kết nối</h2>
       </div>
 
       <!-- Mode Selector -->
       <div class="mode-selector">
         <button id="modeMockBtn" class="mode-btn active mock" onclick="setMode('mock')">
-          🟢 Mock Simulator
+          <span class="ui-dot ui-dot--ok" aria-hidden="true"></span> Mock Simulator
         </button>
         <button id="modeLiveBtn" class="mode-btn live" onclick="setMode('live')">
-          🔴 TikTok LIVE Thật
+          <span class="ui-dot ui-dot--live" aria-hidden="true"></span> TikTok LIVE Thật
         </button>
       </div>
 
@@ -888,7 +887,7 @@
 
       <!-- Action Button -->
       <button id="connectBtn" class="btn btn-connect" onclick="toggleConnect()">
-        <span>🚀 Bắt đầu kết nối</span>
+        <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-play"></use></svg> Bắt đầu kết nối</span>
       </button>
 
       <!-- Active Room Status Card -->
@@ -910,27 +909,27 @@
             <div id="totalEventsStat" class="stat-value cyan">0</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Kim cương 💎</div>
+            <div class="stat-label">Kim cương <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gem"></use></svg></div>
             <div id="totalDiamondsStat" class="stat-value gold">0</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Bình luận 💬</div>
+            <div class="stat-label">Bình luận <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-message"></use></svg></div>
             <div id="totalChatStat" class="stat-value">0</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Lượt thích ❤️</div>
+            <div class="stat-label">Lượt thích <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-heart"></use></svg></div>
             <div id="totalLikesStat" class="stat-value red">0</div>
           </div>
         </div>
 
         <!-- Mock Injector Controls for Demonstration -->
         <div id="mockTools" class="mock-tools">
-          <h4>🧪 Bắn sự kiện thử nghiệm (Mock)</h4>
+          <h4><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-flask"></use></svg> Bắn sự kiện thử nghiệm (Mock)</h4>
           <div class="mock-buttons">
-            <button class="btn-mock" onclick="injectMockEvent('chat')">💬 Gửi Chat</button>
-            <button class="btn-mock" onclick="injectMockEvent('gift')">🎁 Gửi Quà</button>
-            <button class="btn-mock" onclick="injectMockEvent('like')">❤️ Bắn Like</button>
-            <button class="btn-mock" onclick="injectMockEvent('member')">🚪 Vào Phòng</button>
+            <button class="btn-mock" onclick="injectMockEvent('chat')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-message"></use></svg> Gửi Chat</button>
+            <button class="btn-mock" onclick="injectMockEvent('gift')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gift"></use></svg> Gửi Quà</button>
+            <button class="btn-mock" onclick="injectMockEvent('like')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-heart"></use></svg> Bắn Like</button>
+            <button class="btn-mock" onclick="injectMockEvent('member')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-log-in"></use></svg> Vào Phòng</button>
           </div>
         </div>
 
@@ -938,24 +937,24 @@
         <div class="mock-tools" style="background: rgba(13, 17, 28, 0.6); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 0.9rem; margin-top: 1.25rem;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
             <h4 style="margin: 0; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; color: #fff;">
-              🎙️ Voice Studio (AI TTS)
+              <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-mic"></use></svg> Voice Studio (AI TTS)
             </h4>
             <span id="voiceStatusBadge" style="font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 4px; background: rgba(37, 244, 238, 0.15); color: var(--tiktok-cyan); font-weight: 700;">READY</span>
           </div>
           <div style="display: flex; gap: 0.5rem; margin-bottom: 0.6rem;">
             <select id="voiceSelect" class="input-field" style="padding: 0.35rem 0.5rem; font-size: 0.78rem;">
-              <option value="Minh Đức">🇻🇳 Minh Đức (Nam Bắc - Tự nhiên)</option>
-              <option value="Mai Chi">🇻🇳 Mai Chi (Nữ Bắc - Tự nhiên)</option>
-              <option value="Nam Trung">🇻🇳 Nam Trung (Nam Trung - Truyền cảm)</option>
-              <option value="Thu Ngân">🇻🇳 Thu Ngân (Nữ Nam - Ngọt ngào)</option>
-              <option value="Hải Đăng">🇻🇳 Hải Đăng (Nam Bắc - Tin tức)</option>
-              <option value="Lan Anh">🇻🇳 Lan Anh (Nữ Bắc - Dịu dàng)</option>
-              <option value="vi_female">🇻🇳 Nữ (Tự nhiên)</option>
-              <option value="vi_male">🇻🇳 Nam (Ấm áp)</option>
-              <option value="en_female">🇺🇸 English Female</option>
-              <option value="en_male">🇺🇸 English Male</option>
+              <option value="Minh Đức">Minh Đức (Nam Bắc - Tự nhiên)</option>
+              <option value="Mai Chi">Mai Chi (Nữ Bắc - Tự nhiên)</option>
+              <option value="Nam Trung">Nam Trung (Nam Trung - Truyền cảm)</option>
+              <option value="Thu Ngân">Thu Ngân (Nữ Nam - Ngọt ngào)</option>
+              <option value="Hải Đăng">Hải Đăng (Nam Bắc - Tin tức)</option>
+              <option value="Lan Anh">Lan Anh (Nữ Bắc - Dịu dàng)</option>
+              <option value="vi_female">Nữ (Tự nhiên)</option>
+              <option value="vi_male">Nam (Ấm áp)</option>
+              <option value="en_female">English Female</option>
+              <option value="en_male">English Male</option>
             </select>
-            <button class="btn-mock" onclick="testVoiceTts()" style="white-space: nowrap; font-size: 0.75rem; padding: 0.35rem 0.65rem;">🔊 Thử giọng</button>
+            <button class="btn-mock" onclick="testVoiceTts()" style="white-space: nowrap; font-size: 0.75rem; padding: 0.35rem 0.65rem;"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-volume"></use></svg> Thử giọng</button>
           </div>
           <label style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; color: var(--text-muted); cursor: pointer;">
             <input type="checkbox" id="ttsGiftToggle" checked style="accent-color: var(--tiktok-cyan);">
@@ -976,15 +975,15 @@
         </div>
 
         <div class="feed-actions">
-          <button class="btn-icon" onclick="toggleAudio()" id="audioBtn" title="Bật/Tắt âm thanh hiệu ứng">🔔 Âm thanh: BẬT</button>
-          <button class="btn-icon" onclick="clearFeed()" title="Xóa màn hình feed">🧹 Xóa</button>
+          <button class="btn-icon" onclick="toggleAudio()" id="audioBtn" title="Bật/Tắt âm thanh hiệu ứng"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-bell"></use></svg> Âm thanh: BẬT</button>
+          <button class="btn-icon" onclick="clearFeed()" title="Xóa màn hình feed"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-eraser"></use></svg> Xóa</button>
         </div>
       </div>
 
       <!-- Feed List -->
       <div id="eventsContainer" class="events-container">
         <div id="emptyState" class="empty-state">
-          <div class="empty-icon">📡</div>
+          <div class="empty-icon"><svg class="ui-icon ui-icon--xl" aria-hidden="true"><use href="/shared/icons.svg#i-radio"></use></svg></div>
           <h3>Chưa có phiên LIVE kết nối</h3>
           <p>Nhập username TikTok ở cột bên trái và nhấn <strong>Bắt đầu kết nối</strong> để theo dõi trực tiếp.</p>
         </div>
@@ -1039,7 +1038,7 @@
 
     function toggleAudio() {
       audioEnabled = !audioEnabled;
-      document.getElementById('audioBtn').innerText = audioEnabled ? '🔔 Âm thanh: BẬT' : '🔕 Âm thanh: TẮT';
+      document.getElementById('audioBtn').innerHTML = audioEnabled ? uiIcon('bell') + ' Âm thanh: Bật' : uiIcon('bell-off') + ' Âm thanh: Tắt';
     }
 
     function setMode(mode) {
@@ -1087,7 +1086,7 @@
     async function lookupCreator(username) {
       const apiKey = document.getElementById('apiKeyInput').value.trim();
       const seq = ++lookupSeq;
-      showLookup('', '<span>🔎 Đang tìm @' + escapeHtml(username) + '...</span>');
+      showLookup('', '<span>' + uiIcon('search') + ' Đang tìm @' + escapeHtml(username) + '...</span>');
 
       try {
         const res = await fetch(`/api/v1/tiktok/creators/${encodeURIComponent(username)}`, {
@@ -1104,7 +1103,7 @@
             <img src="${escapeHtml(p.avatarUrl || '')}" alt="">
             <div>
               <div class="lookup-name">${escapeHtml(p.nickname || p.uniqueId)}</div>
-              <div class="lookup-meta">@${escapeHtml(p.uniqueId)} · 🟢 Đang LIVE · 👀 ${p.viewerCount ?? 0} người xem</div>
+              <div class="lookup-meta">@${escapeHtml(p.uniqueId)} · <span class="ui-dot ui-dot--live"></span> Đang LIVE · ${uiIcon('eye')} ${p.viewerCount ?? 0} người xem</div>
               ${p.title ? `<div class="lookup-meta">${escapeHtml(p.title)}</div>` : ''}
             </div>
           `);
@@ -1114,16 +1113,16 @@
               <img src="${escapeHtml(p.avatarUrl || '')}" alt="">
               <div>
                 <div class="lookup-name">${escapeHtml(p.nickname)}</div>
-                <div class="lookup-meta">@${escapeHtml(p.uniqueId)} · ⚫ Hiện không LIVE</div>
+                <div class="lookup-meta">@${escapeHtml(p.uniqueId)} · <span class="ui-dot ui-dot--off"></span> Hiện không LIVE</div>
               </div>
             `
-            : `<span>⚫ @${escapeHtml(p.uniqueId)} hiện không LIVE</span>`);
+            : `<span><span class="ui-dot ui-dot--off"></span> @${escapeHtml(p.uniqueId)} hiện không LIVE</span>`);
         }
         return p;
       } catch (err) {
         if (seq === lookupSeq) {
           lastLookup = null;
-          showLookup('is-error', `<span>⚠️ ${escapeHtml(err.message)}</span>`);
+          showLookup('is-error', `<span>${uiIcon('alert')} ${escapeHtml(err.message)}</span>`);
         }
         throw err;
       }
@@ -1290,11 +1289,11 @@
         watchSessionStatus(currentSessionId, apiKey);
 
       } catch (err) {
-        showSystemMessage('❌ ' + err.message);
+        showSystemMessage('Lỗi: ' + err.message);
         updateBeacon('error', 'Lỗi kết nối (xem chi tiết ở feed)');
         connectBtn.disabled = false;
         connectBtn.className = 'btn btn-connect';
-        connectBtn.innerHTML = '<span>🚀 Bắt đầu kết nối</span>';
+        connectBtn.innerHTML = '<span>' + uiIcon('play') + ' Bắt đầu kết nối</span>';
         usernameInput.disabled = false;
       }
     }
@@ -1341,7 +1340,7 @@
           } else if (s.status === 'failed' || s.status === 'ended') {
             clearInterval(statusTimer);
             const reason = s.disconnectReason || 'Kết nối thất bại';
-            showSystemMessage('❌ Không nhận được sự kiện: ' + reason);
+            showSystemMessage('Không nhận được sự kiện: ' + reason);
             // Session already terminal server-side: just drop the socket, keep its reason
             if (currentWebSocket) {
               currentWebSocket.onclose = null;
@@ -1401,7 +1400,7 @@
       const connectBtn = document.getElementById('connectBtn');
       connectBtn.disabled = false;
       connectBtn.className = 'btn btn-connect';
-      connectBtn.innerHTML = '<span>🚀 Bắt đầu kết nối</span>';
+      connectBtn.innerHTML = '<span>' + uiIcon('play') + ' Bắt đầu kết nối</span>';
       document.getElementById('usernameInput').disabled = false;
       updateBeacon('', 'Đã ngắt kết nối');
     }
@@ -1430,7 +1429,7 @@
         const viewers = event.data?.viewerCount;
         if (viewers !== undefined && viewers !== null) {
           document.getElementById('streamerHandle').innerText =
-            '@' + (currentCreator || '') + ' · 👀 ' + viewers;
+            '@' + (currentCreator || '') + ' · ' + viewers + ' người xem';
         }
         return;
       }
@@ -1493,10 +1492,10 @@
           <div class="gift-banner">
             ${event.data?.giftImageUrl
               ? `<img class="gift-image" src="${escapeHtml(event.data.giftImageUrl)}" alt="">`
-              : '<span class="gift-icon">🎁</span>'}
+              : '<span class="gift-icon">' + uiIcon('gift') + '</span>'}
             <div>
               <div class="gift-title">Đã tặng ${escapeHtml(event.data?.giftName || 'Gift')}</div>
-              <div class="gift-diamonds">💎 +${diamonds} kim cương</div>
+              <div class="gift-diamonds">${uiIcon('gem')} +${diamonds} kim cương</div>
             </div>
             <div class="gift-combo">x${event.data?.repeatCount || 1}</div>
           </div>
@@ -1509,7 +1508,7 @@
 
         eventBody = `
           <div class="like-badge">
-            <span>❤️</span> Đã thả ${event.data?.likeCount || 1} tim!
+            ${uiIcon('heart')} Đã thả ${event.data?.likeCount || 1} tim!
           </div>
         `;
       } else if (event.type === 'member') {
@@ -1519,13 +1518,13 @@
 
         eventBody = `
           <div class="member-badge">
-            🚪 Đã tham gia phòng LIVE
+            ${uiIcon('log-in')} Đã tham gia phòng LIVE
           </div>
         `;
       } else if (event.type === 'follow') {
-        eventBody = '<div class="member-badge">➕ Đã follow streamer</div>';
+        eventBody = '<div class="member-badge">' + uiIcon('user-plus') + ' Đã follow streamer</div>';
       } else if (event.type === 'share') {
-        eventBody = '<div class="member-badge">🔗 Đã chia sẻ phòng LIVE</div>';
+        eventBody = '<div class="member-badge">' + uiIcon('share') + ' Đã chia sẻ phòng LIVE</div>';
       }
 
       item.innerHTML = `
@@ -1575,7 +1574,7 @@
       const container = document.getElementById('eventsContainer');
       container.innerHTML = `
         <div id="emptyState" class="empty-state">
-          <div class="empty-icon">🧹</div>
+          <div class="empty-icon">${uiIcon('eraser', 'ui-icon--xl')}</div>
           <p>Màn hình feed đã được dọn sạch.</p>
         </div>
       `;

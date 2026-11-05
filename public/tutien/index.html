@@ -3,39 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tu Tiên Live — TikTok LIVE Overlay</title>
+  <title>Tu Tiên | TikUser LIVE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Noto+Serif:ital,wght@0,600;0,700;0,900;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Noto+Serif:wght@600;700&display=swap" rel="stylesheet">
+  <script src="/shared/app-shell.js"></script>
   <style>
+    @layer base, page;
+    @layer page {
     /* =====================================================================
        01. DESIGN TOKENS & RESET
        ===================================================================== */
     :root {
-      --bg-primary: #0E1430;
+      /* page aliases onto /shared/ui.css tokens */
+      /* overlay world colours stay local; chrome comes from /shared/ui.css */
+      --bg-primary: var(--ink-1);
       --bg-card: rgba(14, 20, 48, 0.82);
       --bg-card-border: rgba(127, 211, 255, 0.22);
       --bg-glass: rgba(20, 28, 64, 0.65);
-      
-      --text-main: #FFFFFF;
-      --text-sub: #E8F7FF;
-      --text-dim: #8FA2C8;
-      
-      --gold: #F2C14E;
+      --text-main: var(--text);
+      --text-sub: var(--text);
+      --text-dim: var(--text-2);
+      --gold: var(--accent);
       --gold-glow: rgba(242, 193, 78, 0.45);
       --crimson: #E8452C;
-      --cyan: #7FD3FF;
+      --cyan: var(--info);
       --cyan-glow: rgba(127, 211, 255, 0.35);
       --emerald: #50E3C2;
       --violet: #9B6BFF;
-      
       --realm-color: #7FD3FF;
       --realm-glow: rgba(127, 211, 255, 0.45);
       --realm-text: #0B2A3D;
-      
-      --font-display: 'Noto Serif', serif;
-      --font-body: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
-      --font-mono: 'Be Vietnam Pro', monospace;
+      --font-display: var(--font-lore);
+      --font-body: var(--font-ui);
+      --font-mono: var(--font-ui);
     }
 
     * {
@@ -76,7 +77,14 @@
       transform-origin: center center;
       transform: translate(-50%, -50%) scale(var(--scale, 1));
       overflow: hidden;
-      background: radial-gradient(circle at 60% 40%, #151F48 0%, #0E1430 75%, #070B1B 100%);
+      /* Sect plaza art (bg-plaza.webp, 720x1280) under a scrim that keeps the
+         top bar, leaderboard and player card readable on the bright painting.
+         Missing file -> the night gradient below shows on its own. */
+      background:
+        linear-gradient(180deg, rgba(8, 12, 31, 0.78) 0%, rgba(8, 12, 31, 0.25) 22%,
+          rgba(8, 12, 31, 0) 45%, rgba(8, 12, 31, 0.35) 70%, rgba(8, 12, 31, 0.85) 100%),
+        url('/tutien-assets/bg-plaza.webp') center bottom / cover no-repeat,
+        radial-gradient(circle at 60% 40%, #151F48 0%, #0E1430 75%, #070B1B 100%);
       box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
     }
 
@@ -1351,7 +1359,9 @@
         transition-duration: 0.01ms !important;
       }
     }
+      } /* end @layer page */
   </style>
+  <link rel="stylesheet" href="/shared/ui.css">
 </head>
 <body>
 
@@ -1366,7 +1376,7 @@
     <!-- 02. TOP BAR -->
     <header id="top-bar">
       <div class="brand-wrap">
-        <div class="brand-icon">⚔️</div>
+        <div class="brand-icon"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-swords"></use></svg></div>
         <div>
           <h1 class="brand-title">TU TIÊN LIVE</h1>
           <div class="brand-subtitle">Thiên Đạo Tu Chân</div>
@@ -1377,19 +1387,19 @@
           <span class="status-dot" id="ws-indicator" title="Trạng thái WebSocket"></span>
           <span>Gõ <b>thamgia</b> nhập môn</span>
         </div>
-        <button class="btn-icon" id="btn-toggle-demo" title="Bật/Tắt Demo Panel">🎮</button>
-        <button class="btn-icon" id="btn-open-settings" title="Cài đặt kết nối">⚙️</button>
+        <button class="btn-icon" id="btn-toggle-demo" title="Bật/Tắt Demo Panel"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gamepad"></use></svg></button>
+        <button class="btn-icon" id="btn-open-settings" title="Cài đặt kết nối"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-settings"></use></svg></button>
       </div>
     </header>
 
     <!-- 03. DEMO PANEL (FLOATING CONTROL BAR) -->
     <div id="demo-panel">
       <span style="font-size:11px; font-weight:800; color:var(--gold);">DEMO:</span>
-      <button class="demo-btn" id="demo-gift-rose">🌸 Hoa (1💎)</button>
-      <button class="demo-btn" id="demo-gift-yacht">🛥️ Du Thuyền (100💎)</button>
-      <button class="demo-btn" id="demo-chat-dokiep">⚡ Độ Kiếp</button>
-      <button class="demo-btn" id="demo-chat-nhapmon">✨ Nhập Môn</button>
-      <button class="demo-btn" id="demo-trigger-breakthrough">🔥 Thử Độ Kiếp 30s</button>
+      <button class="demo-btn" id="demo-gift-rose"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-flower"></use></svg> Hoa (1<svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gem"></use></svg>)</button>
+      <button class="demo-btn" id="demo-gift-yacht"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-ship"></use></svg> Du Thuyền (100<svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gem"></use></svg>)</button>
+      <button class="demo-btn" id="demo-chat-dokiep"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> Độ Kiếp</button>
+      <button class="demo-btn" id="demo-chat-nhapmon"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-sparkles"></use></svg> Nhập Môn</button>
+      <button class="demo-btn" id="demo-trigger-breakthrough"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-flame"></use></svg> Thử Độ Kiếp 30s</button>
     </div>
 
     <!-- 04. MAIN ARENA (LEADERBOARD + SPOTLIGHT CHARACTER) -->
@@ -1399,7 +1409,7 @@
       <section id="leaderboard-box">
         <div class="lb-header">
           <div class="lb-title" id="lb-title">
-            <span>🏆</span> <span id="lb-title-text">BẢNG CẢNH GIỚI</span>
+            <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-trophy"></use></svg></span> <span id="lb-title-text">BẢNG CẢNH GIỚI</span>
           </div>
           <div class="lb-timer" id="lb-timer">15s</div>
         </div>
@@ -1433,7 +1443,7 @@
     <section id="player-card">
       <div class="avatar-wrap">
         <img class="player-avatar" id="card-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%23101633'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='28' fill='%237FD3FF'>仙</text></svg>" alt="Avatar">
-        <div class="realm-badge-icon" id="card-realm-icon">💧</div>
+        <div class="realm-badge-icon" id="card-realm-icon"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-droplet"></use></svg></div>
       </div>
       <div class="player-details">
         <div class="player-header">
@@ -1463,7 +1473,7 @@
       <div class="trib-clouds"></div>
       <div class="lightning-flash" id="lightning-flash"></div>
 
-      <div class="trib-badge">⚠️ THIÊN KIẾP GIÁNG LÂM ⚠️</div>
+      <div class="trib-badge"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-alert"></use></svg> THIÊN KIẾP GIÁNG LÂM <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-alert"></use></svg></div>
       <h2 class="trib-title" id="trib-player-title">Đạo Hữu Đang Độ Kiếp!</h2>
 
       <!-- Circular 30s Countdown Clock -->
@@ -1497,22 +1507,18 @@
     <div id="config-modal">
       <div class="modal-box">
         <!-- Portal Tabs -->
-        <div class="portal-nav-bar">
-          <div class="portal-tabs">
-            <span class="portal-tab active">⚔️ Tu Tiên LIVE</span>
-            <a href="/game" class="portal-tab">🛕 Game Leo Chùa ↗</a>
-            <a href="/" class="portal-tab">📊 Streamer Studio ↗</a>
-          </div>
-          <button type="button" class="obs-shortcut-pill" onclick="copyTutienObsUrl()" title="Copy link OBS Studio 720x1280">
-            🎥 Copy Link OBS Browser Source
-          </button>
-        </div>
+        <div class="ui-modal-bar">
+        <nav class="ui-products" data-ui-products data-current="tutien"></nav>
+        <button type="button" class="ui-btn ui-btn--sm" onclick="copyTutienObsUrl()" title="Sao chép link dán vào OBS Browser Source">
+          <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-copy"></use></svg> Copy link OBS
+        </button>
+      </div>
 
         <div class="modal-grid">
           <!-- Left Column: Zero-Friction Launcher -->
           <div class="modal-col-left">
             <div class="modal-header-block">
-              <span class="modal-icon-big">⚔️</span>
+              <span class="modal-icon-big"><svg class="ui-icon ui-icon--xl" aria-hidden="true"><use href="/shared/icons.svg#i-swords"></use></svg></span>
               <div>
                 <div class="modal-title-pro">
                   Tu Tiên LIVE
@@ -1524,9 +1530,9 @@
 
             <!-- Mode Selector -->
             <div class="mode-pills-wrap">
-              <button type="button" id="tt-mode-live" class="mode-pill-btn active" onclick="setTutienMode('live')">🔴 LIVE Thật</button>
-              <button type="button" id="tt-mode-mock" class="mode-pill-btn" onclick="setTutienMode('mock')">🧪 Mock Server</button>
-              <button type="button" id="tt-mode-demo" class="mode-pill-btn" onclick="setTutienMode('demo')">🎮 Demo Mẫu</button>
+              <button type="button" id="tt-mode-live" class="mode-pill-btn active" onclick="setTutienMode('live')"><span class="ui-dot ui-dot--live" aria-hidden="true"></span> LIVE Thật</button>
+              <button type="button" id="tt-mode-mock" class="mode-pill-btn" onclick="setTutienMode('mock')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-flask"></use></svg> Mock Server</button>
+              <button type="button" id="tt-mode-demo" class="mode-pill-btn" onclick="setTutienMode('demo')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gamepad"></use></svg> Demo Mẫu</button>
             </div>
 
             <!-- TikTok ID Input -->
@@ -1542,10 +1548,10 @@
 
               <!-- Quick Chips -->
               <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
-                <span class="quick-chip" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 3px 9px; font-size: 0.7rem; cursor: pointer;" onclick="applyTutienQuickId('anvatcomai.food')">⚡ anvatcomai.food</span>
-                <span class="quick-chip" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 3px 9px; font-size: 0.7rem; cursor: pointer;" onclick="applyTutienQuickId('linhlinh.live')">⚡ linhlinh.live</span>
-                <span class="quick-chip" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 3px 9px; font-size: 0.7rem; cursor: pointer;" onclick="applyTutienQuickId('phuong_hang')">⚡ phuong_hang</span>
-                <span class="quick-chip" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 3px 9px; font-size: 0.7rem; cursor: pointer;" onclick="applyTutienQuickId('mock_creator')">⚡ mock_creator</span>
+                <span class="quick-chip" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 3px 9px; font-size: 0.7rem; cursor: pointer;" onclick="applyTutienQuickId('anvatcomai.food')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> anvatcomai.food</span>
+                <span class="quick-chip" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 3px 9px; font-size: 0.7rem; cursor: pointer;" onclick="applyTutienQuickId('linhlinh.live')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> linhlinh.live</span>
+                <span class="quick-chip" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 3px 9px; font-size: 0.7rem; cursor: pointer;" onclick="applyTutienQuickId('phuong_hang')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> phuong_hang</span>
+                <span class="quick-chip" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 3px 9px; font-size: 0.7rem; cursor: pointer;" onclick="applyTutienQuickId('mock_creator')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> mock_creator</span>
               </div>
             </div>
 
@@ -1564,10 +1570,10 @@
             <!-- Primary CTAs -->
             <div style="display: flex; flex-direction: column; gap: 8px;">
               <button type="button" id="btn-start-tutien" class="btn-tutien-primary" onclick="startTutienSession()">
-                <span>▶ BẮT ĐẦU TU TIÊN NGAY</span>
+                <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-play"></use></svg> Bắt đầu Tu Tiên ngay</span>
               </button>
               <button type="button" class="btn-tutien-demo" onclick="quickStartTutienDemo()">
-                <span>🎮 CHƠI THỬ DEMO (1-CLICK)</span>
+                <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gamepad"></use></svg> Chơi thử demo (1 chạm)</span>
               </button>
             </div>
 
@@ -1575,7 +1581,7 @@
 
             <!-- Advanced Settings Accordion -->
             <div style="font-size: 0.72rem; color: var(--text-dim); cursor: pointer; display: flex; justify-content: space-between;" onclick="document.getElementById('tt-adv-box').classList.toggle('open')">
-              <span>⚙️ Cài đặt Tenant Key nâng cao (Tự động)</span>
+              <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-settings"></use></svg> Cài đặt Tenant Key nâng cao (Tự động)</span>
               <span>▼</span>
             </div>
             <div id="tt-adv-box" class="advanced-box">
@@ -1594,7 +1600,7 @@
               <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid rgba(127, 211, 255, 0.2);">
                 <div>
                   <div style="font-family: var(--font-display); font-size: 0.96rem; font-weight: 800; color: #fff;">
-                    ⚡ TẤT CẢ TÍNH NĂNG TU TIÊN & TEST NHANH
+                    <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> Tính năng Tu Tiên và thử nhanh
                   </div>
                   <div style="font-size: 0.72rem; color: var(--text-dim);">Khán giả tương tác trực tiếp biến thành tu vi và đan dược:</div>
                 </div>
@@ -1604,7 +1610,7 @@
                 <!-- Feature 1: Chat -->
                 <div class="tutien-feature-card">
                   <div class="tutien-card-top">
-                    <div class="tutien-icon-name"><span>💬</span> Bình Luận</div>
+                    <div class="tutien-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-message"></use></svg></span> Bình Luận</div>
                     <span class="tutien-badge-val">+10 Tu Vi</span>
                   </div>
                   <div class="tutien-card-desc">Bình luận bất kỳ tích lũy tu vi. Khẩu quyết: <code>tu</code>, <code>luyện</code>.</div>
@@ -1614,7 +1620,7 @@
                 <!-- Feature 2: Like -->
                 <div class="tutien-feature-card">
                   <div class="tutien-card-top">
-                    <div class="tutien-icon-name"><span>❤️</span> Thả Tim</div>
+                    <div class="tutien-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-heart"></use></svg></span> Thả Tim</div>
                     <span class="tutien-badge-val">+2 Tu Vi / Tim</span>
                   </div>
                   <div class="tutien-card-desc">Ngưng tụ linh khí, trợ lực cho đạo hữu đang tu luyện.</div>
@@ -1624,7 +1630,7 @@
                 <!-- Feature 3: Follow -->
                 <div class="tutien-feature-card">
                   <div class="tutien-card-top">
-                    <div class="tutien-icon-name"><span>➕</span> Follow Mới</div>
+                    <div class="tutien-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-user-plus"></use></svg></span> Follow Mới</div>
                     <span class="tutien-badge-val">+100 Tu Vi</span>
                   </div>
                   <div class="tutien-card-desc">Gia nhập Tiên Môn, nhận đại lễ bao tu vi lập tức.</div>
@@ -1634,7 +1640,7 @@
                 <!-- Feature 4: Share -->
                 <div class="tutien-feature-card">
                   <div class="tutien-card-top">
-                    <div class="tutien-icon-name"><span>🔗</span> Chia Sẻ</div>
+                    <div class="tutien-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-share"></use></svg></span> Chia Sẻ</div>
                     <span class="tutien-badge-val">+150 Tu Vi</span>
                   </div>
                   <div class="tutien-card-desc">Khai tông lập phái, truyền thừa tiên đạo tới muôn nơi.</div>
@@ -1644,7 +1650,7 @@
                 <!-- Feature 5: Gift Rose -->
                 <div class="tutien-feature-card">
                   <div class="tutien-card-top">
-                    <div class="tutien-icon-name"><span>🎁</span> Tặng Hoa Hồng</div>
+                    <div class="tutien-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gift"></use></svg></span> Tặng Hoa Hồng</div>
                     <span class="tutien-badge-val">+100 Tu Vi</span>
                   </div>
                   <div class="tutien-card-desc">Linh thảo cấp thấp, bổ sung linh lực tức thì.</div>
@@ -1654,7 +1660,7 @@
                 <!-- Feature 6: Big Gift -->
                 <div class="tutien-feature-card">
                   <div class="tutien-card-top">
-                    <div class="tutien-icon-name"><span>🚀</span> Du Thuyền Tiên Đạo</div>
+                    <div class="tutien-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-play"></use></svg></span> Du Thuyền Tiên Đạo</div>
                     <span class="tutien-badge-val">+10.000 Tu Vi</span>
                   </div>
                   <div class="tutien-card-desc">Cực phẩm pháp bảo, đẩy thẳng người tu lên đỉnh cảnh giới!</div>
@@ -1664,7 +1670,7 @@
                 <!-- Feature 7: Breakthrough Tribulation -->
                 <div class="tutien-feature-card" style="border-color: rgba(232, 69, 44, 0.4);">
                   <div class="tutien-card-top">
-                    <div class="tutien-icon-name"><span>⚡</span> Độ Kiếp Thiên Lôi</div>
+                    <div class="tutien-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg></span> Độ Kiếp Thiên Lôi</div>
                     <span class="tutien-badge-val" style="background: rgba(232, 69, 44, 0.2); color: #FF8573;">30 Giây</span>
                   </div>
                   <div class="tutien-card-desc">9 tầng sấm sét giáng lâm! Tỷ lệ thành công dựa trên quà tặng.</div>
@@ -1674,7 +1680,7 @@
                 <!-- Feature 8: Shield / Ho Phap -->
                 <div class="tutien-feature-card">
                   <div class="tutien-card-top">
-                    <div class="tutien-icon-name"><span>🛡️</span> Hộ Pháp Tiên Trận</div>
+                    <div class="tutien-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-shield"></use></svg></span> Hộ Pháp Tiên Trận</div>
                     <span class="tutien-badge-val">+5% Tỷ Lệ</span>
                   </div>
                   <div class="tutien-card-desc">Khán giả gõ <code>hộ pháp</code> để hộ thể cho đạo hữu!</div>
@@ -1684,17 +1690,17 @@
                 <!-- Feature 9: 8 Realms Progression -->
                 <div class="tutien-feature-card" style="grid-column: span 2;">
                   <div class="tutien-card-top">
-                    <div class="tutien-icon-name"><span>🧘</span> 8 Đại Cảnh Giới Đăng Tiên</div>
-                    <span class="tutien-badge-val">Luyện Khí ➔ Đại Thừa</span>
+                    <div class="tutien-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-person"></use></svg></span> 8 Đại Cảnh Giới Đăng Tiên</div>
+                    <span class="tutien-badge-val">Luyện Khí → Đại Thừa</span>
                   </div>
-                  <div class="tutien-card-desc">Luyện Khí ➔ Trúc Cơ ➔ Kim Đan ➔ Nguyên Anh ➔ Hóa Thần ➔ Luyện Hư ➔ Hợp Thể ➔ Đại Thừa (Thành Tiên)!</div>
+                  <div class="tutien-card-desc">Luyện Khí → Trúc Cơ → Kim Đan → Nguyên Anh → Hóa Thần → Luyện Hư → Hợp Thể → Đại Thừa (Thành Tiên)!</div>
                   <button type="button" class="tutien-test-btn" onclick="testTutienAction('next_realm')">▶ Đột Phá Cảnh Giới Tiếp Theo</button>
                 </div>
               </div>
 
               <!-- Mini Footer -->
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; color: var(--text-dim); padding-top: 6px; border-top: 1px solid rgba(127, 211, 255, 0.15);">
-                <span>💡 Phím tắt nhanh: [D] Bảng Demo Nhanh · Đóng bảng để xem toàn màn hình</span>
+                <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-lightbulb"></use></svg> Phím tắt nhanh: [D] Bảng Demo Nhanh · Đóng bảng để xem toàn màn hình</span>
                 <button type="button" style="background: transparent; border: none; color: var(--cyan); cursor: pointer; font-weight: 700;" onclick="document.getElementById('config-modal').classList.remove('active')">Đóng [X]</button>
               </div>
             </div>
@@ -1720,22 +1726,22 @@
       const STORAGE_KEY_EFFECTS = 'tutien_effects_enabled';
 
       const REALM_THEMES = {
-        1: { id: 'luyen-khi', name: 'Luyện Khí', color: '#7FD3FF', glow: 'rgba(127, 211, 255, 0.45)', icon: '💧' },
-        2: { id: 'truc-co', name: 'Trúc Cơ', color: '#50E3C2', glow: 'rgba(80, 227, 194, 0.45)', icon: '🍃' },
-        3: { id: 'kim-dan', name: 'Kim Đan', color: '#F5A623', glow: 'rgba(245, 166, 35, 0.45)', icon: '✨' },
-        4: { id: 'nguyen-anh', name: 'Nguyên Anh', color: '#BD10E0', glow: 'rgba(189, 16, 224, 0.45)', icon: '🔮' },
-        5: { id: 'hoa-than', name: 'Hóa Thần', color: '#4A90E2', glow: 'rgba(74, 144, 226, 0.45)', icon: '🐉' },
-        6: { id: 'luyen-hu', name: 'Luyện Hư', color: '#9013FE', glow: 'rgba(144, 19, 254, 0.45)', icon: '🌌' },
-        7: { id: 'hop-the', name: 'Hợp Thể', color: '#D0021B', glow: 'rgba(208, 2, 27, 0.45)', icon: '☯️' },
-        8: { id: 'dai-thua', name: 'Đại Thừa', color: '#F8E71C', glow: 'rgba(248, 231, 28, 0.45)', icon: '🔥' },
+        1: { id: 'luyen-khi', name: 'Luyện Khí', color: '#7FD3FF', glow: 'rgba(127, 211, 255, 0.45)', icon: 'droplet' },
+        2: { id: 'truc-co', name: 'Trúc Cơ', color: '#50E3C2', glow: 'rgba(80, 227, 194, 0.45)', icon: 'leaf' },
+        3: { id: 'kim-dan', name: 'Kim Đan', color: '#F5A623', glow: 'rgba(245, 166, 35, 0.45)', icon: 'sun' },
+        4: { id: 'nguyen-anh', name: 'Nguyên Anh', color: '#BD10E0', glow: 'rgba(189, 16, 224, 0.45)', icon: 'ghost' },
+        5: { id: 'hoa-than', name: 'Hóa Thần', color: '#4A90E2', glow: 'rgba(74, 144, 226, 0.45)', icon: 'cloud-lightning' },
+        6: { id: 'luyen-hu', name: 'Luyện Hư', color: '#9013FE', glow: 'rgba(144, 19, 254, 0.45)', icon: 'orbit' },
+        7: { id: 'hop-the', name: 'Hợp Thể', color: '#D0021B', glow: 'rgba(208, 2, 27, 0.45)', icon: 'yin-yang' },
+        8: { id: 'dai-thua', name: 'Đại Thừa', color: '#F8E71C', glow: 'rgba(248, 231, 28, 0.45)', icon: 'flame' },
       };
 
       const LEADERBOARD_TYPES = [
-        { key: 'realm', title: 'BẢNG CẢNH GIỚI', icon: '🏆' },
-        { key: 'wealth', title: 'BẢNG PHÚ HÀO', icon: '💎' },
-        { key: 'speed', title: 'BẢNG TỐC ĐỘ', icon: '⚡' },
-        { key: 'luck', title: 'BẢNG MAY MẮN', icon: '🎲' },
-        { key: 'devotion', title: 'BẢNG CỐNG HIẾN', icon: '🌸' }
+        { key: 'realm', title: 'BẢNG CẢNH GIỚI', icon: 'trophy' },
+        { key: 'wealth', title: 'BẢNG PHÚ HÀO', icon: 'gem' },
+        { key: 'speed', title: 'BẢNG TỐC ĐỘ', icon: 'zap' },
+        { key: 'luck', title: 'BẢNG MAY MẮN', icon: 'dices' },
+        { key: 'devotion', title: 'BẢNG CỐNG HIẾN', icon: 'flower' }
       ];
 
       const state = {
@@ -1913,7 +1919,7 @@
         cardNickname.textContent = sanitizeText(player.nickname || player.username || 'Vô Danh Đạo Hữu');
         
         // Realm Badge
-        cardRealmIcon.textContent = theme.icon;
+        cardRealmIcon.innerHTML = uiIcon(theme.icon);
         const maxLevelText = player.isMaxLevel ? ' (Đại Viên Mãn)' : '';
         cardRealmLevel.textContent = `${theme.name} · Tầng ${level}${maxLevelText}`;
 
@@ -1950,13 +1956,13 @@
       // -------------------------------------------------------------------
       // 7. NOTIFICATION FEED (MAX 3 CARDS, AUTO FADE)
       // -------------------------------------------------------------------
-      function addFeedCard(title, desc, value, icon = '✨') {
+      function addFeedCard(title, desc, value, icon = 'sparkles') {
         const card = document.createElement('div');
         card.className = 'feed-card';
 
         const iconEl = document.createElement('div');
         iconEl.className = 'feed-icon';
-        iconEl.textContent = icon;
+        iconEl.innerHTML = uiIcon(icon);
 
         const contentEl = document.createElement('div');
         contentEl.className = 'feed-content';
@@ -2197,12 +2203,12 @@
 
         if (result === 'succeeded' || result === 'success') {
           resultTitle.className = 'result-title success';
-          resultTitle.textContent = '🎉 ĐỘ KIẾP THÀNH CÔNG! 🎉';
+          resultTitle.textContent = 'ĐỘ KIẾP THÀNH CÔNG!';
           resultDesc.textContent = `Thiên kiếp tan biến! ${sanitizeText(player?.nickname || 'Đạo hữu')} chính thức đăng lâm cảnh giới mới!`;
           triggerCharacterState('succeeded');
         } else {
           resultTitle.className = 'result-title failed';
-          resultTitle.textContent = '⚡ ĐỘ KIẾP THẤT BẠI ⚡';
+          resultTitle.textContent = 'ĐỘ KIẾP THẤT BẠI';
           resultDesc.textContent = `Thiên lôi quá mạnh mẽ! Đạo hạnh bị hao tổn, cần tu dưỡng tĩnh tâm.`;
           triggerCharacterState('failed');
         }
@@ -2395,7 +2401,7 @@
               `${sanitizeText(p.nickname || p.username)} đã gia nhập!`,
               `Cảnh giới ${p.realmName || 'Luyện Khí'} · Tầng ${p.level || 1}`,
               'Nhập Môn',
-              '✨'
+              'sparkles'
             );
             if (!state.spotlightPlayer) {
               updatePlayerCard(p);
@@ -2411,7 +2417,7 @@
               `${sanitizeText(data.nickname || 'Đạo Hữu')} tặng ${giftName || 'Linh Vật'}`,
               `Cộng dồn +${formatNumber(amount)} tu vi`,
               `+${formatNumber(amount)}`,
-              '🌸'
+              'flower'
             );
 
             // Spotlight switch rule: >= 100 diamonds or when idle
@@ -2441,7 +2447,7 @@
               `Đột phá thành công!`,
               `${sanitizeText(data.nickname || 'Đạo Hữu')} đã thăng lên Tầng ${lvl}!`,
               `Tầng ${lvl}`,
-              '🌟'
+              'star'
             );
 
             if (player) updatePlayerCard(player);
@@ -2454,7 +2460,7 @@
               `Đại Viên Mãn!`,
               `Đã đạt đỉnh phong, gõ "do kiep" để đột phá cảnh giới!`,
               `Độ Kiếp`,
-              '⚡'
+              'zap'
             );
             break;
           }
@@ -2472,7 +2478,7 @@
               `Gia tăng tỷ lệ độ kiếp!`,
               `Tặng quà hỗ trợ thiên kiếp (+${((data.bonusBp || 100) / 100).toFixed(1)}%)`,
               `+Hộ Pháp`,
-              '🛡️'
+              'shield'
             );
             break;
           }
@@ -2698,7 +2704,7 @@
       window.quickStartTutienDemo = function() {
         configModal.classList.remove('active');
         demoPanel.classList.add('visible');
-        addFeedCard('Khởi chạy chế độ Demo Mẫu thành công!', 'Nhấn các nút bên trên để thử nghiệm', 'Demo Mẫu', '🎮');
+        addFeedCard('Khởi chạy chế độ Demo Mẫu thành công!', 'Nhấn các nút bên trên để thử nghiệm', 'Demo Mẫu', 'gamepad');
       };
 
       window.startTutienSession = async function() {
@@ -2804,7 +2810,7 @@
       // 15. INITIALIZATION SEQUENCE
       // -------------------------------------------------------------------
       async function init() {
-        console.log('🚀 Khởi tạo Tu Tiên Live Overlay 720x1280...');
+        console.log('Khởi tạo Tu Tiên Live Overlay 720x1280...');
         await loadManifest();
 
         try {

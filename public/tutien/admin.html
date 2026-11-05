@@ -3,34 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tu Tiên Live — Quản Trị Hệ Thống (Admin ProMax)</title>
+  <title>Quản trị Tu Tiên | TikUser LIVE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Noto+Serif:ital,wght@0,600;0,700;0,900;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Noto+Serif:wght@600;700&display=swap" rel="stylesheet">
+  <script src="/shared/app-shell.js"></script>
   <style>
+    @layer base, page;
+    @layer page {
     :root {
-      --bg: #090D21;
-      --bg-surface: #0E1538;
-      --bg-card: rgba(18, 26, 62, 0.75);
-      --bg-input: #070B1E;
-      --border: rgba(127, 211, 255, 0.16);
-      --border-focus: #7FD3FF;
-      
-      --text: #F0F4FF;
-      --text-muted: #8EA0C4;
-      --text-dim: #5A6D94;
-      
-      --cyan: #7FD3FF;
+      /* page aliases onto /shared/ui.css tokens */
+      --bg: var(--ink-0);
+      --bg-surface: var(--ink-1);
+      --bg-card: var(--ink-1);
+      --bg-input: var(--ink-2);
+      --border: var(--line);
+      --border-focus: var(--info);
+      --text-muted: var(--text-2);
+      --text-dim: var(--text-3);
+      --cyan: var(--info);
       --cyan-glow: rgba(127, 211, 255, 0.35);
-      --gold: #F2C14E;
+      --gold: var(--accent);
       --gold-glow: rgba(242, 193, 78, 0.35);
-      --crimson: #E8452C;
-      --emerald: #50E3C2;
-      --violet: #9B6BFF;
-      
-      --font-display: 'Noto Serif', serif;
-      --font-body: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
-      --font-mono: 'Be Vietnam Pro', monospace;
+      --crimson: var(--danger);
+      --emerald: var(--ok);
+      --violet: #9b6bff;
+      --font-display: var(--font-ui);
+      --font-body: var(--font-ui);
+      --font-mono: var(--font-ui);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -494,36 +494,24 @@
       justify-content: space-between;
       gap: 12px;
     }
+      } /* end @layer page */
   </style>
+  <link rel="stylesheet" href="/shared/ui.css">
 </head>
-<body>
+<body class="ui-page">
 
   <!-- =============================================================
        01. TOP NAVIGATION HEADER
        ============================================================= -->
-  <header id="header">
-    <div class="brand">
-      <div class="brand-crest">⚡</div>
-      <div>
-        <div class="brand-title">TU TIÊN LIVE — QUẢN TRỊ</div>
-        <div class="brand-badge">Streamer Pro Control</div>
-      </div>
-    </div>
-
-    <!-- Tab Switcher (Visible when Authenticated) -->
-    <nav class="nav-tabs" id="nav-tabs" style="display: none;">
-      <button class="nav-btn active" data-tab="config">⚙️ Cấu Hình Game</button>
-      <button class="nav-btn" data-tab="players">👥 Người Chơi</button>
-      <button class="nav-btn" data-tab="gifts">🎁 Giao Dịch Quà</button>
-      <button class="nav-btn" data-tab="audit">📜 Kiểm Toán & Sức Khỏe</button>
-    </nav>
-
-    <div class="header-actions">
+  <header class="ui-appbar">
+    <a class="ui-brand" href="/"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-brand"></use></svg><span>TikUser <b>LIVE</b></span></a>
+    <nav class="ui-products" data-ui-products data-current="tutien-admin"></nav>
+    <div class="ui-appbar-end">
       <div class="status-pill" id="health-pill">
         <span class="status-dot"></span>
         <span id="health-text">Đang kết nối...</span>
       </div>
-      <button class="btn-auth" id="btn-logout" style="display: none;">Đăng Xuất</button>
+      <button class="btn-auth" id="btn-logout" style="display: none;">Đăng xuất</button>
     </div>
   </header>
 
@@ -531,10 +519,17 @@
        02. MAIN CONTAINER
        ============================================================= -->
   <main id="main-content">
+    <nav class="nav-tabs" id="nav-tabs" style="display: none;">
+      <button class="nav-btn active" data-tab="config"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-settings"></use></svg> Cấu Hình Game</button>
+      <button class="nav-btn" data-tab="players"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-users"></use></svg> Người Chơi</button>
+      <button class="nav-btn" data-tab="gifts"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gift"></use></svg> Giao Dịch Quà</button>
+      <button class="nav-btn" data-tab="audit"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-file-text"></use></svg> Kiểm Toán & Sức Khỏe</button>
+    </nav>
+
 
     <!-- 02.1 AUTHENTICATION CARD (IF NOT AUTHENTICATED) -->
     <section id="auth-screen">
-      <div style="font-size: 48px; margin-bottom: 14px;">🔐</div>
+      <div style="font-size: 48px; margin-bottom: 14px;"><svg class="ui-icon ui-icon--xl" aria-hidden="true"><use href="/shared/icons.svg#i-lock"></use></svg></div>
       <h2 class="auth-title">Đăng Nhập Quản Trị</h2>
       <p class="auth-desc">Nhập API Key có quyền <code>game:admin</code> (hoặc wildcard <code>*</code>). Key được lưu trữ an toàn trong <code>sessionStorage</code> của phiên duyệt web này.</p>
       
@@ -555,19 +550,19 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h3 class="card-title">⚙️ Cấu Hình Tham Số Gameplay</h3>
+            <h3 class="card-title"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-settings"></use></svg> Cấu Hình Tham Số Gameplay</h3>
             <p class="card-desc">Cấu hình lưu động được cache theo tenant và bảo vệ bằng số hiệu Revision chống xung đột (Optimistic Concurrency Control).</p>
           </div>
           <div style="display: flex; gap: 8px;">
-            <button class="btn btn-ghost" id="btn-reload-config">🔄 Nạp Lại</button>
-            <button class="btn btn-gold" id="btn-save-config">💾 Lưu Cấu Hình</button>
+            <button class="btn btn-ghost" id="btn-reload-config"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-refresh"></use></svg> Nạp Lại</button>
+            <button class="btn btn-gold" id="btn-save-config"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-save"></use></svg> Lưu Cấu Hình</button>
           </div>
         </div>
 
         <!-- Conflict Alert Banner (409) -->
         <div class="conflict-alert" id="config-conflict-alert">
           <div>
-            <b>⚠️ Xung đột sửa đổi (Revision Mismatch)!</b> Cấu hình đã bị thay đổi ở phiên khác. Vui lòng nạp lại để cập nhật bản mới nhất.
+            <b><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-alert"></use></svg> Xung đột sửa đổi (Revision Mismatch)!</b> Cấu hình đã bị thay đổi ở phiên khác. Vui lòng nạp lại để cập nhật bản mới nhất.
           </div>
           <button class="btn btn-danger" id="btn-resolve-conflict" style="padding: 4px 10px; font-size: 12px;">Nạp Lại Ngay</button>
         </div>
@@ -575,8 +570,8 @@
         <!-- Presets Toolbar -->
         <div class="preset-toolbar">
           <span style="font-size: 12px; font-weight: 800; color: var(--gold);">PRESET NHANH:</span>
-          <button class="btn btn-ghost" id="preset-default" style="font-size: 12px;">🌟 Chuẩn GDD (Phòng Vừa/Lớn)</button>
-          <button class="btn btn-ghost" id="preset-fast" style="font-size: 12px;">⚡ Fast-Paced (Phòng Nhỏ / Tiến Trình x10)</button>
+          <button class="btn btn-ghost" id="preset-default" style="font-size: 12px;"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-star"></use></svg> Chuẩn GDD (Phòng Vừa/Lớn)</button>
+          <button class="btn btn-ghost" id="preset-fast" style="font-size: 12px;"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> Fast-Paced (Phòng Nhỏ / Tiến Trình x10)</button>
           <span style="margin-left: auto; font-size: 12px; color: var(--text-dim);" id="cfg-revision-badge">Revision: #1</span>
         </div>
 
@@ -643,7 +638,7 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h3 class="card-title">👥 Danh Sách Đạo Hữu (Người Chơi)</h3>
+            <h3 class="card-title"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-users"></use></svg> Danh Sách Đạo Hữu (Người Chơi)</h3>
             <p class="card-desc">Tìm kiếm, theo dõi hồ sơ tu vi, lịch sử độ kiếp và can thiệp thủ công có ghi vết kiểm toán.</p>
           </div>
           <div style="display: flex; gap: 8px; width: 340px;">
@@ -684,7 +679,7 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h3 class="card-title">🎁 Sổ Cái Giao Dịch Quà Tặng (Gift Ledger)</h3>
+            <h3 class="card-title"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gift"></use></svg> Sổ Cái Giao Dịch Quà Tặng (Gift Ledger)</h3>
             <p class="card-desc">Lịch sử quy đổi tu vi và bonus độ kiếp. Các giao dịch lỗi có thể được kích hoạt thử lại.</p>
           </div>
           <div style="display: flex; gap: 8px;">
@@ -695,7 +690,7 @@
               <option value="failed">Failed (Thất bại / Lỗi)</option>
               <option value="expired">Expired (Hết hạn)</option>
             </select>
-            <button class="btn btn-ghost" id="btn-refresh-gifts">🔄 Làm Mới</button>
+            <button class="btn btn-ghost" id="btn-refresh-gifts"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-refresh"></use></svg> Làm Mới</button>
           </div>
         </div>
 
@@ -733,10 +728,10 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h3 class="card-title">🩺 Trạng Thái Sức Khỏe Máy Chủ (System Health)</h3>
+            <h3 class="card-title"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-activity"></use></svg> Trạng Thái Sức Khỏe Máy Chủ (System Health)</h3>
             <p class="card-desc">Thông số vận hành thời gian thực của máy chủ game Tu Tiên Live.</p>
           </div>
-          <button class="btn btn-ghost" id="btn-refresh-health">🔄 Cập Nhật</button>
+          <button class="btn btn-ghost" id="btn-refresh-health"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-refresh"></use></svg> Cập Nhật</button>
         </div>
 
         <div class="grid-3" id="health-metrics-grid">
@@ -771,10 +766,10 @@
       <div class="card">
         <div class="card-header">
           <div>
-            <h3 class="card-title">📜 Nhật Ký Kiểm Toán Can Thiệp (Audit Logs)</h3>
+            <h3 class="card-title"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-file-text"></use></svg> Nhật Ký Kiểm Toán Can Thiệp (Audit Logs)</h3>
             <p class="card-desc">Ghi nhận minh bạch mọi thao tác can thiệp thủ công từ streamer / admin kèm lý do.</p>
           </div>
-          <button class="btn btn-ghost" id="btn-refresh-audit">🔄 Làm Mới</button>
+          <button class="btn btn-ghost" id="btn-refresh-audit"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-refresh"></use></svg> Làm Mới</button>
         </div>
 
         <div class="table-wrap">
@@ -785,7 +780,7 @@
                 <th>Hành Động</th>
                 <th>Đối Tượng</th>
                 <th>Lý Do Bắt Buộc</th>
-                <th>Thay Đổi (Trước ➔ Sau)</th>
+                <th>Thay Đổi (Trước → Sau)</th>
               </tr>
             </thead>
             <tbody id="audit-table-body">
@@ -812,7 +807,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 style="font-family: var(--font-display); font-size: 18px; color: var(--cyan);">Chỉnh Sửa Hồ Sơ Đạo Hữu</h3>
-        <button class="btn btn-ghost" id="btn-close-adjust" style="padding: 4px 8px;">✕</button>
+        <button class="btn btn-ghost" id="btn-close-adjust" style="padding: 4px 8px;"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-x"></use></svg></button>
       </div>
 
       <div class="form-group">
@@ -867,8 +862,8 @@
   <div class="modal-backdrop" id="modal-reset-player">
     <div class="modal-content" style="border-color: var(--crimson);">
       <div class="modal-header">
-        <h3 style="font-family: var(--font-display); font-size: 18px; color: var(--crimson);">⚠️ Xác Nhận Reset Đạo Hữu</h3>
-        <button class="btn btn-ghost" id="btn-close-reset" style="padding: 4px 8px;">✕</button>
+        <h3 style="font-family: var(--font-display); font-size: 18px; color: var(--crimson);"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-alert"></use></svg> Xác Nhận Reset Đạo Hữu</h3>
+        <button class="btn btn-ghost" id="btn-close-reset" style="padding: 4px 8px;"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-x"></use></svg></button>
       </div>
 
       <p style="font-size: 13px; color: #FFA39E; line-height: 1.5; margin-bottom: 16px;">
@@ -1226,14 +1221,14 @@
             btnEdit.style.padding = '4px 8px';
             btnEdit.style.fontSize = '11px';
             btnEdit.style.marginRight = '6px';
-            btnEdit.textContent = '✏️ Sửa';
+            btnEdit.innerHTML = uiIcon('pencil') + ' Sửa';
             btnEdit.onclick = () => openAdjustModal(p);
 
             const btnReset = document.createElement('button');
             btnReset.className = 'btn btn-danger';
             btnReset.style.padding = '4px 8px';
             btnReset.style.fontSize = '11px';
-            btnReset.textContent = '⚠️ Reset';
+            btnReset.innerHTML = uiIcon('alert') + ' Reset';
             btnReset.onclick = () => openResetModal(p);
 
             tdAction.appendChild(btnEdit);
@@ -1409,7 +1404,7 @@
             const tdDia = document.createElement('td');
             tdDia.style.fontFamily = 'var(--font-mono)';
             tdDia.style.color = 'var(--gold)';
-            tdDia.textContent = `${formatNumber(g.totalDiamonds)} 💎`;
+            tdDia.textContent = `${formatNumber(g.totalDiamonds)} kim cương`;
 
             // Exp
             const tdExp = document.createElement('td');
@@ -1435,7 +1430,7 @@
               btnRetry.className = 'btn btn-cyan';
               btnRetry.style.padding = '3px 8px';
               btnRetry.style.fontSize = '11px';
-              btnRetry.textContent = '🔄 Thử Lại';
+              btnRetry.innerHTML = uiIcon('refresh') + ' Thử lại';
               btnRetry.onclick = async () => {
                 try {
                   await adminApi(`/api/v1/game/admin/gift-transactions/${g.id}/retry`, 'POST');
@@ -1527,7 +1522,7 @@
             tdDiff.style.fontSize = '11px';
             const beforeStr = l.before ? JSON.stringify(l.before) : '{}';
             const afterStr = l.after ? JSON.stringify(l.after) : '{}';
-            tdDiff.textContent = `${beforeStr} ➔ ${afterStr}`;
+            tdDiff.textContent = `${beforeStr} → ${afterStr}`;
 
             tr.appendChild(tdTime);
             tr.appendChild(tdAction);

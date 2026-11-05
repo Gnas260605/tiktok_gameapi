@@ -3,29 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Leo Chùa — TikUser ProMax LIVE Studio</title>
+  <title>Leo Chùa | TikUser LIVE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Outfit:wght@500;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Noto+Serif:wght@600;700&display=swap" rel="stylesheet">
+  <script src="/shared/app-shell.js"></script>
   <style>
+    @layer base, page;
+    @layer page {
     :root {
-      --bg: #07090e;
-      --panel-bg: rgba(13, 17, 28, 0.88);
-      --panel-border: rgba(255, 255, 255, 0.1);
-      --panel-glow: rgba(254, 44, 85, 0.15);
-      --text: #f3f4f6;
-      --text-muted: #9ca3af;
-      --text-dim: #6b7280;
-      --accent: #fe2c55;
-      --accent-glow: rgba(254, 44, 85, 0.35);
-      --cyan: #25f4ee;
-      --cyan-glow: rgba(37, 244, 238, 0.3);
-      --gold: #ffd000;
-      --gold-glow: rgba(255, 208, 0, 0.3);
-      --emerald: #00f2a9;
-      --font-display: 'Outfit', system-ui, sans-serif;
-      --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      /* page aliases onto /shared/ui.css tokens */
+      --bg: var(--ink-0);
+      --panel-bg: var(--ink-1);
+      --panel-border: var(--line);
+      --panel-glow: rgba(242, 193, 78, 0.12);
+      --accent-glow: rgba(242, 193, 78, 0.35);
+      --cyan: var(--info);
+      --cyan-glow: rgba(127, 211, 255, 0.3);
+      --gold: var(--accent);
+      --gold-glow: rgba(242, 193, 78, 0.3);
+      --emerald: var(--ok);
+      --text-muted: var(--text-2);
+      --text-dim: var(--text-3);
+      --font-display: var(--font-ui);
+      --font-body: var(--font-ui);
+      --font-mono: var(--font-ui);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1025,7 +1027,9 @@
       z-index: 30;
       pointer-events: none;
     }
+      } /* end @layer page */
   </style>
+  <link rel="stylesheet" href="/shared/ui.css">
 </head>
 <body>
   <!-- Canvas Game Stage -->
@@ -1040,7 +1044,7 @@
         <div class="streamer-badge">
           <span id="islandBeacon" class="live-beacon"></span>
           <span id="islandStatusText">OFFLINE</span>
-          <span id="islandViewers">👀 0</span>
+          <span id="islandViewers"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-eye"></use></svg> 0</span>
         </div>
       </div>
     </div>
@@ -1048,19 +1052,19 @@
     <div class="island-divider"></div>
 
     <button id="islandVoiceBtn" class="island-btn" onclick="toggleVoiceMute()" title="Bật/Tắt Voice AI TTS">
-      🎙️ <span id="islandVoiceLabel">Voice AI: BẬT</span>
+      <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-mic"></use></svg> <span id="islandVoiceLabel">Voice AI: BẬT</span>
     </button>
 
     <button id="islandSoundBtn" class="island-btn" onclick="toggleMasterSound()" title="Bật/Tắt âm thanh chuông">
-      🔊 <span id="islandSoundLabel">Chuông</span>
+      <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-volume"></use></svg> <span id="islandSoundLabel">Chuông</span>
     </button>
 
     <button class="island-btn active" onclick="toggleStudioDock()" title="Bật/Tắt bảng điều khiển Streamer (Phím S hoặc Tab)">
-      🎛️ Studio
+      <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-sliders"></use></svg> Studio
     </button>
 
     <button class="island-btn" onclick="toggleObsCleanMode()" title="Chế độ OBS sạch (Ẩn toàn bộ UI nút bấm, phím H)">
-      🖥️ OBS
+      <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-monitor"></use></svg> OBS
     </button>
   </header>
 
@@ -1068,16 +1072,16 @@
   <aside id="studioDock">
     <div class="dock-header">
       <span class="dock-title">
-        🛕 Streamer Control Panel
+        <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-pagoda"></use></svg> Streamer Control Panel
       </span>
-      <button class="dock-close" onclick="toggleStudioDock()" title="Đóng">✕</button>
+      <button class="dock-close" onclick="toggleStudioDock()" title="Đóng"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-x"></use></svg></button>
     </div>
 
     <div class="dock-tabs">
-      <button class="dock-tab active" onclick="switchDockTab('tools', this)">🎮 Tương tác</button>
-      <button class="dock-tab" onclick="switchDockTab('voice', this)">🎙️ Voice AI</button>
-      <button class="dock-tab" onclick="switchDockTab('chat', this)">💬 Chat Live</button>
-      <button class="dock-tab" onclick="switchDockTab('stream', this)">📹 Stream</button>
+      <button class="dock-tab active" onclick="switchDockTab('tools', this)"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gamepad"></use></svg> Tương tác</button>
+      <button class="dock-tab" onclick="switchDockTab('voice', this)"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-mic"></use></svg> Voice AI</button>
+      <button class="dock-tab" onclick="switchDockTab('chat', this)"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-message"></use></svg> Chat Live</button>
+      <button class="dock-tab" onclick="switchDockTab('stream', this)"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-video"></use></svg> Stream</button>
     </div>
 
     <div class="dock-body">
@@ -1087,21 +1091,21 @@
           Bắn sự kiện nhanh (Mock Tools)
         </div>
         <div class="mock-grid">
-          <button class="btn-action red" onclick="injectMock('gift_rose')">🎁 Tặng Hoa Hồng</button>
-          <button class="btn-action gold" onclick="injectMock('gift_galaxy')">🌌 Tặng Galaxy (+50)</button>
-          <button class="btn-action red" onclick="injectMock('like')">❤️ Bắn Tim (+3)</button>
-          <button class="btn-action cyan" onclick="injectMock('chat')">💬 Bình Luận (+2)</button>
-          <button class="btn-action" onclick="injectMock('member')">🚪 Người Vào Live</button>
-          <button class="btn-action" onclick="injectMock('follow')">➕ Follow (+10)</button>
-          <button class="btn-action gold" onclick="runHazard(performance.now(), 'monkey')">🐒 Thả Khỉ Cướp Dép</button>
-          <button class="btn-action" onclick="runHazard(performance.now(), 'wc')">💩 Đau Bụng Vào WC</button>
-          <button class="btn-action cyan" onclick="injectMock('paper')">🧻 Gõ Giấy Cứu WC</button>
-          <button class="btn-action gold" onclick="triggerSummitWin()">🔔 Rung Chuông Thắng</button>
+          <button class="btn-action red" onclick="injectMock('gift_rose')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gift"></use></svg> Tặng Hoa Hồng</button>
+          <button class="btn-action gold" onclick="injectMock('gift_galaxy')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-sparkles"></use></svg> Tặng Galaxy (+50)</button>
+          <button class="btn-action red" onclick="injectMock('like')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-heart"></use></svg> Bắn Tim (+3)</button>
+          <button class="btn-action cyan" onclick="injectMock('chat')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-message"></use></svg> Bình Luận (+2)</button>
+          <button class="btn-action" onclick="injectMock('member')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-log-in"></use></svg> Người Vào Live</button>
+          <button class="btn-action" onclick="injectMock('follow')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-user-plus"></use></svg> Follow (+10)</button>
+          <button class="btn-action gold" onclick="runHazard(performance.now(), 'monkey')"><img class="ui-art" src="/game-assets/monkey-run-1.png" alt=""> Thả Khỉ Cướp Dép</button>
+          <button class="btn-action" onclick="runHazard(performance.now(), 'wc')"><img class="ui-art" src="/game-assets/wc-hut.png" alt=""> Đau Bụng Vào WC</button>
+          <button class="btn-action cyan" onclick="injectMock('paper')"><img class="ui-art" src="/game-assets/toilet-paper.png" alt=""> Gõ Giấy Cứu WC</button>
+          <button class="btn-action gold" onclick="triggerSummitWin()"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-bell"></use></svg> Rung Chuông Thắng</button>
         </div>
 
         <div style="margin-top: 8px;">
           <button class="btn-action" style="width: 100%; border-color: rgba(255, 255, 255, 0.15);" onclick="nextRound()">
-            🔄 Khởi Động Vòng Mới
+            <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-refresh"></use></svg> Khởi Động Vòng Mới
           </button>
         </div>
       </div>
@@ -1110,26 +1114,26 @@
       <div id="pane-voice" class="dock-pane">
         <div class="voice-card">
           <div class="voice-header">
-            <span style="font-size: 0.8rem; font-weight: 800;">🎙️ AI Voice Engine</span>
+            <span style="font-size: 0.8rem; font-weight: 800;"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-mic"></use></svg> AI Voice Engine</span>
             <span id="dockVoiceBadge" class="voice-badge">PROBING...</span>
           </div>
 
           <label style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700;">CHỌN GIỌNG ĐỌC AI</label>
           <select id="dockVoiceSelect" class="input-field" onchange="onVoiceChanged()">
-            <option value="Minh Đức">🇻🇳 Minh Đức (Nam Bắc - Tự nhiên)</option>
-            <option value="Mai Chi">🇻🇳 Mai Chi (Nữ Bắc - Tự nhiên)</option>
-            <option value="Nam Trung">🇻🇳 Nam Trung (Nam Trung - Truyền cảm)</option>
-            <option value="Thu Ngân">🇻🇳 Thu Ngân (Nữ Nam - Ngọt ngào)</option>
-            <option value="Hải Đăng">🇻🇳 Hải Đăng (Nam Bắc - Tin tức)</option>
-            <option value="Lan Anh">🇻🇳 Lan Anh (Nữ Bắc - Dịu dàng)</option>
-            <option value="vi_female">🇻🇳 Nữ Chuẩn (Studio)</option>
-            <option value="vi_male">🇻🇳 Nam Chuẩn (Ấm áp)</option>
-            <option value="en_female">🇺🇸 English Female</option>
-            <option value="en_male">🇺🇸 English Male</option>
+            <option value="Minh Đức">Minh Đức (Nam Bắc - Tự nhiên)</option>
+            <option value="Mai Chi">Mai Chi (Nữ Bắc - Tự nhiên)</option>
+            <option value="Nam Trung">Nam Trung (Nam Trung - Truyền cảm)</option>
+            <option value="Thu Ngân">Thu Ngân (Nữ Nam - Ngọt ngào)</option>
+            <option value="Hải Đăng">Hải Đăng (Nam Bắc - Tin tức)</option>
+            <option value="Lan Anh">Lan Anh (Nữ Bắc - Dịu dàng)</option>
+            <option value="vi_female">Nữ Chuẩn (Studio)</option>
+            <option value="vi_male">Nam Chuẩn (Ấm áp)</option>
+            <option value="en_female">English Female</option>
+            <option value="en_male">English Male</option>
           </select>
 
           <button class="btn-action cyan" style="margin-top: 4px;" onclick="testVoicePlayback()">
-            🔊 Thử Giọng Đọc Này
+            <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-volume"></use></svg> Thử Giọng Đọc Này
           </button>
         </div>
 
@@ -1196,14 +1200,10 @@
       <div class="setup-glow"></div>
 
       <!-- Portal Navigation Header -->
-      <div class="portal-nav-bar">
-        <div class="portal-tabs">
-          <span class="portal-tab active">🛕 Leo Chùa LIVE</span>
-          <a href="/tutien" class="portal-tab tutien-tab">⚔️ Tu Tiên LIVE ↗</a>
-          <a href="/" class="portal-tab">📊 Streamer Studio ↗</a>
-        </div>
-        <button type="button" class="obs-shortcut-pill" onclick="copyObsUrl()" title="Sao chép link cho OBS Studio">
-          🎥 Copy Link OBS Browser Source
+      <div class="ui-modal-bar">
+        <nav class="ui-products" data-ui-products data-current="leochua"></nav>
+        <button type="button" class="ui-btn ui-btn--sm" onclick="copyObsUrl()" title="Sao chép link dán vào OBS Browser Source">
+          <svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-copy"></use></svg> Copy link OBS
         </button>
       </div>
 
@@ -1211,7 +1211,7 @@
         <!-- Left Column: Zero-Friction Connection -->
         <div class="setup-col-left">
           <div class="setup-header">
-            <span class="setup-icon">🛕</span>
+            <span class="setup-icon"><img src="/game-assets/pagoda.png" alt="" width="48" height="48"></span>
             <div>
               <div class="setup-title">
                 Leo Chùa
@@ -1223,9 +1223,9 @@
 
           <!-- Mode Selector -->
           <div class="mode-pills">
-            <button type="button" class="mode-pill active" onclick="selectMode('live', this)">🔴 LIVE Thật</button>
-            <button type="button" class="mode-pill" onclick="selectMode('mock', this)">🧪 Mock Server</button>
-            <button type="button" class="mode-pill" onclick="selectMode('demo', this)">🎮 Demo Mẫu</button>
+            <button type="button" class="mode-pill active" onclick="selectMode('live', this)"><span class="ui-dot ui-dot--live" aria-hidden="true"></span> LIVE Thật</button>
+            <button type="button" class="mode-pill" onclick="selectMode('mock', this)"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-flask"></use></svg> Mock Server</button>
+            <button type="button" class="mode-pill" onclick="selectMode('demo', this)"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gamepad"></use></svg> Demo Mẫu</button>
           </div>
 
           <!-- Main TikTok ID Input -->
@@ -1241,10 +1241,10 @@
 
             <!-- Quick Preset Chips -->
             <div class="quick-chips">
-              <span class="quick-chip" onclick="applyQuickId('anvatcomai.food')">⚡ anvatcomai.food</span>
-              <span class="quick-chip" onclick="applyQuickId('linhlinh.live')">⚡ linhlinh.live</span>
-              <span class="quick-chip" onclick="applyQuickId('phuong_hang')">⚡ phuong_hang</span>
-              <span class="quick-chip" onclick="applyQuickId('mock_creator')">⚡ mock_creator</span>
+              <span class="quick-chip" onclick="applyQuickId('anvatcomai.food')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> anvatcomai.food</span>
+              <span class="quick-chip" onclick="applyQuickId('linhlinh.live')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> linhlinh.live</span>
+              <span class="quick-chip" onclick="applyQuickId('phuong_hang')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> phuong_hang</span>
+              <span class="quick-chip" onclick="applyQuickId('mock_creator')"><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> mock_creator</span>
             </div>
           </div>
 
@@ -1263,10 +1263,10 @@
           <!-- Action Buttons -->
           <div class="action-buttons">
             <button type="button" id="startBtn" class="btn-submit" onclick="handleSetupSubmit(event)">
-              <span>▶ BẮT ĐẦU LIVE NGAY</span>
+              <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-play"></use></svg> Bắt đầu LIVE ngay</span>
             </button>
             <button type="button" class="btn-demo-quick" onclick="quickStartDemo()">
-              <span>🎮 CHƠI THỬ OFFLINE (DEMO 1-CLICK)</span>
+              <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gamepad"></use></svg> Chơi thử offline (demo 1 chạm)</span>
             </button>
           </div>
 
@@ -1274,7 +1274,7 @@
 
           <!-- Advanced Collapsible Drawer (Automated) -->
           <div id="advancedToggle" class="advanced-toggle" onclick="toggleAdvancedSettings()">
-            <span>⚙️ Cài đặt Tenant Key nâng cao (Tự động)</span>
+            <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-settings"></use></svg> Cài đặt Tenant Key nâng cao (Tự động)</span>
             <span id="advancedIcon">▼</span>
           </div>
           <div id="advancedBox" class="advanced-box">
@@ -1289,7 +1289,7 @@
             <div class="features-header">
               <div>
                 <div class="features-title">
-                  <span>⚡ TẤT CẢ TÍNH NĂNG TƯƠNG TÁC PHÒNG LIVE</span>
+                  <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-zap"></use></svg> Tính năng tương tác trong phòng LIVE</span>
                 </div>
                 <div class="features-subtitle">Người xem tương tác sẽ kích hoạt nhân vật leo núi ngay trên màn hình:</div>
               </div>
@@ -1299,7 +1299,7 @@
               <!-- Feature 1: Chat -->
               <div class="feature-card">
                 <div class="feature-card-top">
-                  <div class="feature-icon-name"><span>💬</span> Bình Luận</div>
+                  <div class="feature-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-message"></use></svg></span> Bình Luận</div>
                   <span class="feature-badge">+2 bậc</span>
                 </div>
                 <div class="feature-desc">Mọi bình luận đều đẩy nhân vật leo thang dồn dập.</div>
@@ -1309,7 +1309,7 @@
               <!-- Feature 2: Like -->
               <div class="feature-card">
                 <div class="feature-card-top">
-                  <div class="feature-icon-name"><span>❤️</span> Thả Tim</div>
+                  <div class="feature-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-heart"></use></svg></span> Thả Tim</div>
                   <span class="feature-badge">+1 bậc / tim</span>
                 </div>
                 <div class="feature-desc">Bão tim tạo hiệu ứng tim bay neon rực rỡ trợ lực.</div>
@@ -1319,7 +1319,7 @@
               <!-- Feature 3: Follow -->
               <div class="feature-card">
                 <div class="feature-card-top">
-                  <div class="feature-icon-name"><span>➕</span> Follow Mới</div>
+                  <div class="feature-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-user-plus"></use></svg></span> Follow Mới</div>
                   <span class="feature-badge">+10 bậc</span>
                 </div>
                 <div class="feature-desc">Khán giả bấm theo dõi phòng live sẽ bật nhảy thần tốc.</div>
@@ -1329,7 +1329,7 @@
               <!-- Feature 4: Share -->
               <div class="feature-card">
                 <div class="feature-card-top">
-                  <div class="feature-icon-name"><span>🔗</span> Chia Sẻ</div>
+                  <div class="feature-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-share"></use></svg></span> Chia Sẻ</div>
                   <span class="feature-badge">+15 bậc</span>
                 </div>
                 <div class="feature-desc">Chia sẻ livestream lan tỏa năng lượng, tăng tốc cực đại.</div>
@@ -1339,7 +1339,7 @@
               <!-- Feature 5: Small Gifts -->
               <div class="feature-card">
                 <div class="feature-card-top">
-                  <div class="feature-icon-name"><span>🎁</span> Quà Hoa Hồng</div>
+                  <div class="feature-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-gift"></use></svg></span> Quà Hoa Hồng</div>
                   <span class="feature-badge">Bay theo KC</span>
                 </div>
                 <div class="feature-desc">Hoa hồng, kem, pháo... mỗi kim cương đẩy bay thêm 1 bậc!</div>
@@ -1349,7 +1349,7 @@
               <!-- Feature 6: Big Gift Cable Car -->
               <div class="feature-card cable">
                 <div class="feature-card-top">
-                  <div class="feature-icon-name"><span>🚠</span> Cáp Treo (≥100 KC)</div>
+                  <div class="feature-icon-name"><span><img class="ui-art" src="/game-assets/cable-car.png" alt=""></span> Cáp Treo (≥100 KC)</div>
                   <span class="feature-badge">Vút Thẳng Đỉnh</span>
                 </div>
                 <div class="feature-desc">Quà lớn (Du thuyền, Sư tử, Cáp treo) lên Cáp Treo vượt núi!</div>
@@ -1359,7 +1359,7 @@
               <!-- Feature 7: Monkey Hazard -->
               <div class="feature-card hazard">
                 <div class="feature-card-top">
-                  <div class="feature-icon-name"><span>🐒</span> Khỉ Cướp Dép</div>
+                  <div class="feature-icon-name"><span><img class="ui-art" src="/game-assets/monkey-run-1.png" alt=""></span> Khỉ Cướp Dép</div>
                   <span class="feature-badge">-8 bậc</span>
                 </div>
                 <div class="feature-desc">Khỉ núi bất ngờ phục kích cướp dép top 3 dẫn đầu!</div>
@@ -1369,7 +1369,7 @@
               <!-- Feature 8: WC Hazard -->
               <div class="feature-card hazard">
                 <div class="feature-card-top">
-                  <div class="feature-icon-name"><span>💩</span> WC Đau Bụng</div>
+                  <div class="feature-icon-name"><span><img class="ui-art" src="/game-assets/wc-hut.png" alt=""></span> WC Đau Bụng</div>
                   <span class="feature-badge">Kẹt 10 giây</span>
                 </div>
                 <div class="feature-desc">Người chơi bị nhốt vào nhà vệ sinh không thể di chuyển!</div>
@@ -1379,7 +1379,7 @@
               <!-- Feature 9: Paper Rescue -->
               <div class="feature-card">
                 <div class="feature-card-top">
-                  <div class="feature-icon-name"><span>🧻</span> Cứu Bạn "Giấy"</div>
+                  <div class="feature-icon-name"><span><img class="ui-art" src="/game-assets/toilet-paper.png" alt=""></span> Cứu Bạn "Giấy"</div>
                   <span class="feature-badge">Thoát Ngay</span>
                 </div>
                 <div class="feature-desc">Khán giả gõ "giấy" hoặc "giay" để giải cứu đồng đội kẹt WC!</div>
@@ -1389,7 +1389,7 @@
               <!-- Feature 10: Victory Bell -->
               <div class="feature-card">
                 <div class="feature-card-top">
-                  <div class="feature-icon-name"><span>🔔</span> Chuông Thắng</div>
+                  <div class="feature-icon-name"><span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-bell"></use></svg></span> Chuông Thắng</div>
                   <span class="feature-badge">Đỉnh 100 Bậc</span>
                 </div>
                 <div class="feature-desc">Ai gõ chuông trước chiến thắng vòng, pháo hoa nổ tung vinh danh!</div>
@@ -1399,8 +1399,8 @@
 
             <!-- Mini Tips Footer -->
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; color: var(--text-dim); padding-top: 6px; border-top: 1px solid var(--panel-border);">
-              <span>💡 Phím tắt nhanh: [S] Menu Studio · [H] OBS Sạch · [M] Khỉ · [W] WC</span>
-              <span style="color: var(--emerald); font-weight: 700;">🟢 Âm thanh chuông & Voice AI tích hợp</span>
+              <span><svg class="ui-icon" aria-hidden="true"><use href="/shared/icons.svg#i-lightbulb"></use></svg> Phím tắt nhanh: [S] Menu Studio · [H] OBS Sạch · [M] Khỉ · [W] WC</span>
+              <span style="color: var(--emerald); font-weight: 700;"><span class="ui-dot ui-dot--ok" aria-hidden="true"></span> Âm thanh chuông & Voice AI tích hợp</span>
             </div>
           </div>
         </div>
@@ -1703,7 +1703,7 @@
       if (event.type === 'roomUser') {
         viewerCount = event.data?.viewerCount ?? viewerCount;
         const el = document.getElementById('islandViewers');
-        if (el && viewerCount !== null) el.innerText = `👀 ${viewerCount}`;
+        if (el && viewerCount !== null) el.innerHTML = `${uiIcon('eye')} ${viewerCount}`;
         return;
       }
 
@@ -2427,10 +2427,10 @@
             const badge = document.getElementById('radarBadge');
             if (profile.isLive) {
               badge.className = 'radar-badge live';
-              badge.innerHTML = '🔴 ĐANG LIVE';
+              badge.innerHTML = '<span class="ui-dot ui-dot--live"></span> Đang LIVE';
             } else {
               badge.className = 'radar-badge offline';
-              badge.innerHTML = '🟡 OFFLINE (Chạy Mock/Demo)';
+              badge.innerHTML = '<span class="ui-dot ui-dot--warn"></span> Offline (Mock/Demo)';
             }
           }
         } catch (e) {
